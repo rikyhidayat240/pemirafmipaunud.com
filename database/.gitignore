@@ -1,0 +1,3 @@
+*.sqlite*
+/data-mahasiswa
+/data-mahasiswa/*
