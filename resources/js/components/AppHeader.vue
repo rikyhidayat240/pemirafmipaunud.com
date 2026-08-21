@@ -44,6 +44,16 @@ const mainNavItems: NavItem[] = [
         icon: UserCheck,
     },
     {
+        title: 'Hasil BEM',
+        href: '/result-bem',
+        icon: UserCheck,
+    },
+    {
+        title: 'Hasil HIMA',
+        href: '/result-hima',
+        icon: Users,
+    },
+    {
         title: 'Kegiatan',
         href: '/events',
         icon: Calendar,

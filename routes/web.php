@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('dashboard', 'index')->name('dashboard');
         Route::get('terms', 'terms')->name('terms');
         Route::get('candidates/{slug}', 'candidates')->name('candidates');
+        Route::get('result-bem', 'resultBem')->name('result-bem');
         Route::get('result-hima', 'resultHima')->name('result-hima');
     });
 

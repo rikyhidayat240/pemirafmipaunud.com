@@ -90,11 +90,46 @@ class BerandaController extends Controller
 
     public function resultBem()
     {
-        return Inertia::render('ResultBem');
+        $kegiatan = Kegiatan::where('tahun', now()->year)
+            ->where('ruang_lingkup', 'fakultas')
+            ->where('waktu_selesai', '>', now())
+            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->first();
+            
+        if (!$kegiatan) {
+            $kegiatan = Kegiatan::where('tahun', now()->year)
+                ->where('ruang_lingkup', 'fakultas')
+                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->latest('waktu_selesai')->first();
+        }
+
+        return Inertia::render('ResultBem', [
+            'kegiatan' => $kegiatan
+        ]);
     }
 
     public function resultHima()
     {
-        return Inertia::render('ResultHima');
+        $kegiatans = Kegiatan::where('tahun', now()->year)
+            ->where('ruang_lingkup', 'program studi')
+            ->where('waktu_selesai', '>', now())
+            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->get();
+            
+        if ($kegiatans->isEmpty()) {
+            // Fallback to latest HIMA events of this year
+            $latestHima = Kegiatan::where('tahun', now()->year)
+                ->where('ruang_lingkup', 'program studi')
+                ->latest('waktu_selesai')
+                ->first();
+                
+            if ($latestHima) {
+                $kegiatans = Kegiatan::where('tahun', now()->year)
+                    ->where('ruang_lingkup', 'program studi')
+                    ->where('waktu_selesai', $latestHima->waktu_selesai)
+                    ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->get();
+            }
+        }
+
+        return Inertia::render('ResultHima', [
+            'kegiatans' => $kegiatans
+        ]);
     }
 }
