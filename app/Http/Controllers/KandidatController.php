@@ -6,6 +6,7 @@ use App\Models\Kandidat;
 use App\Models\Kegiatan;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -26,8 +27,10 @@ class KandidatController extends Controller
         $kegiatan = Kegiatan::where('tahun', now()->year)
             ->withCount(['mahasiswa as total_mahasiswa'])
             ->get();
+        // PERF-02: Select only necessary fields for the dropdown list
         $mahasiswa = User::where('is_admin', 0)
             ->orWhere('nama', 'LIKE', '%Kotak Kosong%')
+            ->select('nim', 'nama', 'id_program_studi')
             ->get();
         return Inertia::render('kandidat/Index', [
             'kandidat' => $kandidat,
@@ -121,7 +124,8 @@ class KandidatController extends Controller
             // Redirect with success message
             return redirect()->back()->with('success', 'Data kandidat berhasil dibuat.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat data kandidat: ' . $e->getMessage());
+            Log::error('Create kandidat error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat data kandidat. Silakan coba lagi.');
         }
     }
 
@@ -207,7 +211,8 @@ class KandidatController extends Controller
             // Redirect with success message
             return redirect()->back()->with('success', 'Data kandidat berhasil diperbarui.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data kandidat: ' . $e->getMessage());
+            Log::error('Update kandidat error id=' . $id . ': ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data kandidat. Silakan coba lagi.');
         }
     }
 
@@ -219,6 +224,11 @@ class KandidatController extends Controller
         try {
             // Find kandidat
             $kandidat = Kandidat::findOrFail($id);
+
+            // SEC-06: Block deletion if votes have been cast for this kandidat
+            if ($kandidat->jumlah_suara > 0) {
+                return redirect()->back()->with('error', 'Kandidat tidak dapat dihapus karena sudah ada suara yang masuk.');
+            }
 
             // Detach all mahasiswa relationships first
             $kandidat->mahasiswa()->detach();
@@ -233,10 +243,11 @@ class KandidatController extends Controller
             
             return redirect()->back()->with('success', 'Data kandidat berhasil dihapus.');
         } catch (\Exception $e) {
+            Log::error('Delete kandidat error id=' . $id . ': ' . $e->getMessage());
             if (str_contains($e->getMessage(), 'Integrity constraint violation')) {
-                return redirect()->back()->with('error', 'Data kandidat tidak dapat dihapus karena terkait dengan data lain.');
+                return redirect()->back()->with('error', 'Data kandidat tidak dapat dihapus karena terkait dengan data voting.');
             }
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data kandidat: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data kandidat. Silakan coba lagi.');
         }
     }
 }

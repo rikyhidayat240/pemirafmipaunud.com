@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProgramStudi;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -15,6 +16,11 @@ class MahasiswaController extends Controller
      */
     public function syncMahasiswa(int $year)
     {
+        // SEC-07: Validate year range
+        if ($year < 2020 || $year > (int) date('Y') + 1) {
+            abort(422, 'Tahun tidak valid.');
+        }
+
         // Get current users and users from spreadsheet
         $currentUsers = User::all();
         $users = User::getMahasiswaFromSheet($year);
@@ -23,18 +29,18 @@ class MahasiswaController extends Controller
         try {
             foreach ($users as $user) {
                 $currentUser = $currentUsers->firstWhere('nim', $user['nim']);
-                // Sync user kegiatan logic can be added here if needed
                 if ($currentUser) {
-                    // Update existing user
+                    // Update existing user (preserve email/password if already set)
                     $currentUser->update((array)$user);
                 } else {
-                    // Create new user
+                    // Create new user — no password set, mahasiswa must register themselves
                     User::create((array)$user);
                 }
             }
             return redirect()->back()->with('success', 'Data mahasiswa tahun ' . $year . ' berhasil disinkronisasi.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyinkronkan data mahasiswa: ' . $e->getMessage());
+            Log::error('Sync mahasiswa error year=' . $year . ': ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyinkronkan data mahasiswa. Silakan coba lagi.');
         }
     }
 
@@ -105,21 +111,23 @@ class MahasiswaController extends Controller
             }
 
             // Create new mahasiswa
+            // SEC-02: No default password — mahasiswa must self-register via /register page
             User::create([
                 'nim' => $validatedData['nim'],
                 'nama' => $validatedData['nama'],
-                'email' => $validatedData['email'] ?? null,
+                'email' => null, // email is set when mahasiswa registers themselves
                 'id_program_studi' => $validatedData['id_program_studi'],
                 'angkatan' => $validatedData['angkatan'],
                 'avatar' => $avatarPath,
-                'password' => $validatedData['email'] ? bcrypt('pemirafmipa') : null,
-                'email_verified_at' => $validatedData['email'] ? now()->toDateTime() : null,
+                'password' => null, // no default password
+                'email_verified_at' => null,
             ]);
 
             // Redirect back with success message
-            return back()->with('success', 'Data mahasiswa berhasil dibuat.');
+            return back()->with('success', 'Data mahasiswa berhasil dibuat. Mahasiswa dapat mendaftar akun sendiri melalui halaman Registrasi.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Terjadi kesalahan saat membuat data mahasiswa: ' . $e->getMessage());
+            Log::error('Create mahasiswa error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat membuat data mahasiswa. Silakan coba lagi.');
         }
     }
 
@@ -183,21 +191,26 @@ class MahasiswaController extends Controller
                 $avatarPath = 'foto-mahasiswa/' . $avatarName;
             }
 
-            // Update mahasiswa
-            $mahasiswa->update([
+            // Update mahasiswa — preserve existing password, only update profile fields
+            $updateData = [
                 'nim' => $validatedData['nim'],
                 'nama' => $validatedData['nama'],
-                'email' => $validatedData['email'] ?? null,
                 'id_program_studi' => $validatedData['id_program_studi'],
                 'angkatan' => $validatedData['angkatan'],
                 'avatar' => $avatarPath,
-                'password' => $validatedData['email'] ? bcrypt('pemirafmipa') : null,
-                'email_verified_at' => $validatedData['email'] ? now()->toDateTime() : null,
-            ]);
+            ];
+
+            // Only update email if provided and different
+            if (!empty($validatedData['email'])) {
+                $updateData['email'] = $validatedData['email'];
+            }
+
+            $mahasiswa->update($updateData);
 
             return redirect()->back()->with('success', 'Data mahasiswa berhasil diperbarui.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data mahasiswa: ' . $e->getMessage());
+            Log::error('Update mahasiswa error nim=' . $nim . ': ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data mahasiswa. Silakan coba lagi.');
         }
     }
 
@@ -219,10 +232,11 @@ class MahasiswaController extends Controller
             $mahasiswa->delete();
             return redirect()->back()->with('success', 'Data mahasiswa berhasil dihapus.');
         } catch (\Exception $e) {
+            Log::error('Delete mahasiswa error nim=' . $nim . ': ' . $e->getMessage());
             if (str_contains($e->getMessage(), 'Integrity constraint violation')) {
-                return redirect()->back()->with('error', 'Data mahasiswa tidak dapat dihapus karena terkait dengan data lain.');
+                return redirect()->back()->with('error', 'Data mahasiswa tidak dapat dihapus karena terkait dengan data voting.');
             }
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data mahasiswa: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data mahasiswa. Silakan coba lagi.');
         }
     }
 }

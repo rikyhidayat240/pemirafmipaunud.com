@@ -6,6 +6,7 @@ use App\Models\Kandidat;
 use App\Models\Kegiatan;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +19,10 @@ class SuratSuaraController extends Controller
      */
     public function show()
     {
-        // 1. Eager load kegiatan to avoid N+1 queries when checking pivot later
-        $user = User::with('kegiatan')->where('nim', auth('web')->user()->nim)->first();
+        // PERF-01: Use auth()->user() directly — already loaded by Laravel, no DB re-query needed
+        $user = auth('web')->user();
+        // Eager-load kegiatan for vote status checking
+        $user->load('kegiatan');
 
         // Check user requirements
         if ($user->is_admin) {
@@ -89,7 +92,7 @@ class SuratSuaraController extends Controller
         $request->validate([
             'id_kandidat_bem' => 'nullable|exists:kandidat,id',
             'id_kandidat_hima' => 'nullable|exists:kandidat,id',
-            'ttd' => 'required|string', // base64 data URL
+            'ttd' => 'required|string|max:700000', // SEC-08: ~525KB decoded max (base64 overhead ~33%)
         ]);
 
         if (!$request->id_kandidat_bem && !$request->id_kandidat_hima) {
