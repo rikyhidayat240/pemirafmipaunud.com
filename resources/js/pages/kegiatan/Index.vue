@@ -36,13 +36,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="w-full md:max-w-7xl mx-auto px-4 py-6">
-            <DataTable 
-                :columns="columns" 
-                :data="kegiatan" 
-                :helpers="{
-                    programStudi: programStudi
-                }" 
-            />
+            <div class="p-4 sm:p-6 rounded-2xl border border-white/10 bg-[#0a0d22]/80 backdrop-blur-md shadow-2xl">
+                <DataTable 
+                    :columns="columns" 
+                    :data="kegiatan" 
+                    :helpers="{
+                        programStudi: programStudi
+                    }" 
+                />
+            </div>
         </div>
     </AppLayout>
 </template>

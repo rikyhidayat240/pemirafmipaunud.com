@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, Kegiatan } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { LoaderCircle, TriangleAlert } from 'lucide-vue-next';
+import { LoaderCircle, TriangleAlert, ChevronRight } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import dayjs from 'dayjs';
 
@@ -26,11 +24,9 @@ const filteredKegiatan = computed(() => {
     if (!auth.value.user) return [];
 
     return props.kegiatan.filter((item) => {
-        // Always show fakultas level activities
         if (item.ruang_lingkup === 'fakultas') {
             return true;
         }
-        // Show program studi level activities only for matching program studi
         if (item.ruang_lingkup === 'program studi') {
             return item.id_program_studi === auth.value.user.id_program_studi;
         }
@@ -42,7 +38,6 @@ const filteredKegiatan = computed(() => {
 const currentTime = ref(new Date());
 let interval: number | null = null;
 
-// Add a function to calculate time difference for individual activities
 const getTimeUntilStart = (startTime: Date) => {
     const target = new Date(startTime);
     const now = currentTime.value;
@@ -73,7 +68,6 @@ const candidateLink = (nama: string) => {
     return `/candidates/${formattedName}`;
 };
 
-// Set up interval to update current time every second
 onMounted(() => {
     interval = setInterval(() => {
         currentTime.value = new Date();
@@ -92,6 +86,14 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/terms',
     },
 ];
+
+const terms = [
+    'Mahasiswa/i yang dapat memilih adalah mahasiswa/i aktif program studi sarjana Fakultas MIPA.',
+    'Mahasiswa/i hanya bisa melakukan pemilihan sebanyak satu kali tanpa adanya pengulangan.',
+    'Mahasiswa/i diharapkan menggunakan hak pilinya dan memilih dengan berlandaskan Luberjurdil.',
+    'Hasil pemilihan bersifat mutlak dan tidak dapat diganggu gugat, sesuai dengan aturan yang telah ditetapkan.',
+    'Setiap pelanggaran terhadap syarat dan ketentuan ini akan dikenakan sanksi sesuai dengan peraturan yang berlaku.',
+];
 </script>
 
 <template>
@@ -99,102 +101,133 @@ const breadcrumbs: BreadcrumbItem[] = [
     <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-col gap-2 overflow-x-hidden">
-            <div class="relative flex flex-1 flex-col items-start justify-start">
-                <div class="w-full flex justify-between items-start relative">
-                    <img src="/images/corner-image.png" alt="" class="w-20 sm:w-40 lg:w-50">
-                    <img src="/images/background-logo-dpm.png" alt="" class="h-20 sm:h-50 my-auto">
-                    <img src="/images/corner-image.png" alt="" class="w-20 sm:w-40 lg:w-50 transform -scale-x-100">
-                    <h1
-                        class="text-xl sm:text-3xl lg:text-4xl font-bold text-center text-primary text-shadow-sm text-shadow-background uppercase absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2
-                            drop-shadow-[0_2px_4px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        Pemilihan Umum Raya Mahasiswa FMIPA {{ dayjs().year() }}
-                    </h1>
-                </div>
+        <div class="flex h-full flex-col gap-0 overflow-x-hidden">
 
-                <div class="mx-auto grid w-full max-w-7xl items-start gap-4 px-4 mt-12">
-                    <h1 class="md:text-md font-semibold lg:text-xl">Syarat & Ketentuan :</h1>
-                    <ol class="md:text-md ml-2 list-inside list-decimal space-y-2 text-sm md:ml-10 lg:text-lg">
-                        <li>Mahasiswa/i yang dapat memilih adalah mahasiswa/i aktif program studi sarjana Fakultas MIPA Universitas Udayana.</li>
-                        <li>Mahasiswa/i hanya bisa melakukan pemilihan sebanyak satu kali tanpa adanya pengulangan.</li>
-                        <li>Mahasiswa/i diharapkan menggunakan hak pilihnya dan memilih dengan berlandaskan Luberjurdil.</li>
-                        <li>Hasil pemilihan bersifat mutlak dan tidak dapat diganggu gugat, sesuai dengan aturan yang telah ditetapkan.</li>
-                        <li>Setiap pelanggaran terhadap syarat dan ketentuan ini akan dikenakan sanksi sesuai dengan peraturan yang berlaku.</li>
+            <!-- ===== PAGE HEADER ===== -->
+            <div class="relative flex items-center justify-center py-10 px-4 overflow-hidden">
+                <!-- Corner ornaments -->
+                <div class="absolute top-0 left-0 w-24 h-24 opacity-20"
+                    style="background: linear-gradient(135deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 0 100%);"></div>
+                <div class="absolute top-0 right-0 w-24 h-24 opacity-20"
+                    style="background: linear-gradient(225deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 100% 100%);"></div>
+
+                <div class="relative z-10 flex flex-col items-center gap-3 text-center">
+                    <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                        class="size-16 drop-shadow-lg opacity-90"
+                        onerror="this.style.display='none'" />
+                    <div>
+                        <p class="text-xs text-white/40 uppercase tracking-widest">Selamat Datang di Bilik Suara</p>
+                        <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase poppins-font mt-1">
+                            Pemilihan Umum Raya Mahasiswa
+                        </h1>
+                        <p class="text-lg sm:text-xl font-black poppins-font" style="color: #f0c040;">
+                            FMIPA {{ dayjs().year() }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SYARAT & KETENTUAN ===== -->
+            <div class="max-w-4xl mx-auto w-full px-4 pb-8">
+                <div class="pemira-card rounded-xl p-6">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-1 h-6 rounded-full" style="background: #c9a227;"></div>
+                        <h2 class="text-base font-bold text-white">Syarat & Ketentuan</h2>
+                    </div>
+                    <ol class="space-y-3">
+                        <li v-for="(term, idx) in terms" :key="idx"
+                            class="flex items-start gap-3 text-sm text-white/60 leading-relaxed">
+                            <span class="flex-shrink-0 size-5 rounded-full border border-yellow-400/30 text-yellow-400 flex items-center justify-center text-xs font-semibold mt-0.5">
+                                {{ idx + 1 }}
+                            </span>
+                            <span>{{ term }}</span>
+                        </li>
                     </ol>
                 </div>
+            </div>
 
-                <div v-if="auth.user && filteredKegiatan.length > 0" class="w-full px-4">
-                    <h1 class="text-lg md:text-xl lg:text-2xl mt-12 mb-6 font-bold text-center">
-                        Kegiatan Yang Anda Dapat Ikuti
-                    </h1>
-                    <div class="md:max-w-7xl mb-6 w-full grid place-self-center auto-rows-min gap-4 md:grid-cols-2">
-                        <Card v-for="item in filteredKegiatan" :key="item.id"
-                            class="border shadow-sm shadow-foreground/10">
-                            <CardHeader>
-                                <img :src="`/storage/${item.foto}`" alt="" class="w-full h-64 object-cover rounded-md">
-                            </CardHeader>
-                            <CardContent class="space-y-2 px-6">
-                                <CardTitle class="text-lg md:text-xl">{{ item.nama }}</CardTitle>
-                                <CardDescription>
+            <!-- ===== KEGIATAN SECTION ===== -->
+            <div v-if="auth.user && filteredKegiatan.length > 0" class="max-w-4xl mx-auto w-full px-4 pb-8">
+                <h2 class="text-base font-bold text-center text-white mb-5">
+                    Kegiatan Yang Anda Dapat Ikuti
+                </h2>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div v-for="item in filteredKegiatan" :key="item.id"
+                        class="pemira-card rounded-xl overflow-hidden hover:border-yellow-400/30 transition-all duration-300">
+                        <!-- Header with decorative background -->
+                        <div class="relative p-4 pb-3" style="background: linear-gradient(135deg, #1e2456, #2a3070);">
+                            <div class="absolute top-2 right-2 opacity-20">
+                                <div class="star-4 size-6 bg-yellow-400"></div>
+                            </div>
+                            <p class="text-xs text-yellow-400/70 uppercase tracking-widest font-semibold">Pemilihan Umum Raya · FMIPA {{ dayjs().year() }}</p>
+                            <h3 class="text-sm font-bold text-white mt-1 leading-tight">{{ item.nama }}</h3>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-2">
+                                <div class="size-1.5 rounded-full bg-green-400 animate-pulse"></div>
+                                <p class="text-xs text-white/50">
                                     {{ getTimeUntilStart(item.waktu_mulai as Date).expired ?
                                         getTimeUntilStart(item.waktu_mulai as Date).text :
                                         `Dimulai dalam ${getTimeUntilStart(item.waktu_mulai as Date).text}`
                                     }}
-                                </CardDescription>
-                            </CardContent>
-                            <CardFooter>
-                                <Link :href="candidateLink(item.nama)">
-                                <Button variant="default" size="default" :disabled="isMoved" @click="isMoved = true">
+                                </p>
+                            </div>
+                            <Link :href="candidateLink(item.nama)">
+                                <button :disabled="isMoved" @click="isMoved = true"
+                                    class="w-full py-2 rounded-lg text-xs font-semibold text-white/60 border border-white/10 hover:border-yellow-400/30 hover:text-yellow-400 transition-all">
                                     Lihat Kandidat
-                                </Button>
-                                </Link>
-                            </CardFooter>
-                        </Card>
+                                </button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="mx-auto mt-10 max-w-md grid grid-cols-2 gap-4 px-4">
-                    <Link :href="route('dashboard')" class="w-full col-span-1">
-                    <Button variant="outline" size="lg" :disabled="isMoved" @click="isMoved = true"
-                        class="border-primary border-2 text-base font-semibold text-primary hover:text-primary w-full">
-                        Batal
-                    </Button>
-                    </Link>
-                    <AlertDialog>
-                        <AlertDialogTrigger as-child>
-                            <Button variant="default" size="lg" class="text-base font-semibold" :disabled="isMoved">
-                                Mulai Memilih
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <TriangleAlert class="size-16 text-red-700 mx-auto" />
-                                <AlertDialogTitle class="mt-2 text-xl text-center">
-                                    Perhatian
-                                </AlertDialogTitle>
-                                <AlertDialogDescription class="text-base text-center">
-                                    Pemilihan hanya dapat dilakukan sekali dan tidak ada pengulangan, apabila anda ingin
-                                    melanjutkan silahkan klik tombol "Lanjutkan"!
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter class="sm:justify-center">
-                                <div class="grid w-full grid-cols-2 gap-3">
-                                    <AlertDialogCancel :disabled="isMoved"
-                                        class="m-0 border border-primary text-primary hover:bg-primary/10">
-                                        Batal
-                                    </AlertDialogCancel>
-                                    <Button as-child :disabled="isMoved" @click="isMoved = true">
-                                        <Link :href="route('vote.show')" class="bg-primary hover:bg-primary/90">
+            <!-- ===== CTA BUTTONS ===== -->
+            <div class="max-w-sm mx-auto w-full px-4 pb-12 grid grid-cols-2 gap-4">
+                <Link :href="route('dashboard')" class="w-full">
+                    <button :disabled="isMoved" @click="isMoved = true"
+                        class="w-full py-3 rounded-full text-sm font-semibold text-white/50 border border-white/15 hover:border-yellow-400/30 hover:text-yellow-400 transition-all">
+                        ← Kembali ke Beranda
+                    </button>
+                </Link>
+
+                <AlertDialog>
+                    <AlertDialogTrigger as-child>
+                        <button :disabled="isMoved"
+                            class="w-full py-3 rounded-full text-sm font-bold btn-gold">
+                            Mulai Pemilihan ➜
+                        </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent class="bg-[#1a1f4a] border-yellow-900/30">
+                        <AlertDialogHeader>
+                            <TriangleAlert class="size-16 text-yellow-400 mx-auto" />
+                            <AlertDialogTitle class="mt-2 text-xl text-center text-white">
+                                Perhatian
+                            </AlertDialogTitle>
+                            <AlertDialogDescription class="text-base text-center text-white/60">
+                                Pemilihan hanya dapat dilakukan sekali dan tidak ada pengulangan, apabila anda ingin
+                                melanjutkan silahkan klik tombol "Lanjutkan"!
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter class="sm:justify-center">
+                            <div class="grid w-full grid-cols-2 gap-3">
+                                <AlertDialogCancel :disabled="isMoved"
+                                    class="m-0 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10 bg-transparent">
+                                    Batal
+                                </AlertDialogCancel>
+                                <button as-child :disabled="isMoved" @click="isMoved = true" class="btn-gold py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                                    <Link :href="route('vote.show')" class="flex items-center gap-2 w-full justify-center">
                                         <LoaderCircle v-if="isMoved" class="size-4 animate-spin" />
                                         Lanjutkan
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
+                                    </Link>
+                                </button>
+                            </div>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
+
         </div>
     </AppLayout>
 </template>

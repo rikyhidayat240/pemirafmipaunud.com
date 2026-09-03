@@ -154,8 +154,7 @@ class SuratSuaraController extends Controller
             $kandidatBem->increment('jumlah_suara');
             $kandidatHima->increment('jumlah_suara');
 
-            return redirect()->route('dashboard')
-                ->with('alert', ['type' => 'success', 'title' => 'Pemilihan Berhasil', 'message' => 'Terima kasih telah berpartisipasi dalam pemilihan.']);
+            return Inertia::render('ThankYou');
         });
     }
 }

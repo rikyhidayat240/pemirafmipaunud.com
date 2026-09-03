@@ -17,14 +17,14 @@ const props = defineProps<{
   kegiatans?: Kegiatan[] | null
 }>()
 
-// Palet warna unik per HIMA: [from, to, accent]
+// Palet warna unik per HIMA (aksen berbeda, tapi tetap cocok di dark theme)
 const himaColors = [
-  { from: '#1e40af', to: '#3b82f6', accent: '#60a5fa', glow: 'rgba(59,130,246,0.4)' },   // Biru - Kimia/Fisika
-  { from: '#065f46', to: '#10b981', accent: '#34d399', glow: 'rgba(16,185,129,0.4)' },   // Hijau - Biologi
-  { from: '#7c3aed', to: '#a78bfa', accent: '#c4b5fd', glow: 'rgba(167,139,250,0.4)' },  // Ungu - Matematika
-  { from: '#b45309', to: '#f59e0b', accent: '#fcd34d', glow: 'rgba(245,158,11,0.4)' },   // Kuning - Informatika
-  { from: '#be123c', to: '#f43f5e', accent: '#fb7185', glow: 'rgba(244,63,94,0.4)' },    // Pink - Farmasi
-  { from: '#0e7490', to: '#06b6d4', accent: '#67e8f9', glow: 'rgba(6,182,212,0.4)' },    // Cyan - lainnya
+  { from: '#1e3a8a', to: '#3b82f6', accent: '#60a5fa', glow: 'rgba(59,130,246,0.25)' },
+  { from: '#064e3b', to: '#10b981', accent: '#34d399', glow: 'rgba(16,185,129,0.25)' },
+  { from: '#4c1d95', to: '#8b5cf6', accent: '#a78bfa', glow: 'rgba(139,92,246,0.25)' },
+  { from: '#78350f', to: '#f59e0b', accent: '#fcd34d', glow: 'rgba(245,158,11,0.25)' },
+  { from: '#881337', to: '#f43f5e', accent: '#fb7185', glow: 'rgba(244,63,94,0.25)' },
+  { from: '#0c4a6e', to: '#06b6d4', accent: '#67e8f9', glow: 'rgba(6,182,212,0.25)' },
 ]
 
 const selectedHimaId = ref<string>('')
@@ -78,29 +78,57 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
 
       <!-- Empty State -->
       <div v-if="processedKegiatans.length === 0"
-        class="w-full flex justify-center items-center relative py-20 overflow-hidden">
-        <img src="/logo-pemira.svg" alt="" class="h-64 opacity-10 absolute">
-        <h1 class="text-2xl font-bold text-center text-white uppercase relative z-10 px-4"
-          style="text-shadow:-2px -2px 0 #A50000,2px -2px 0 #A50000,-2px 2px 0 #A50000,2px 2px 0 #A50000">
-          Belum Ada Data Pemilihan HIMA
-        </h1>
+        class="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <img src="/Logo pemira.png" alt="" class="size-24 opacity-10">
+        <h1 class="text-xl font-bold text-white/30">Belum Ada Data Pemilihan HIMA</h1>
       </div>
 
       <template v-else>
+        <!-- Header Banner -->
+        <div class="relative overflow-hidden mb-2 pt-6 pb-4 text-center">
+          <!-- BG glow -->
+          <div class="absolute inset-0 pointer-events-none transition-all duration-700"
+            :style="{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${colors.glow}, transparent 70%)` }"></div>
+          <!-- Logo watermark -->
+          <img src="/Logo pemira.png" alt=""
+            class="absolute inset-0 w-full h-full object-contain opacity-[0.04] scale-110 pointer-events-none">
+
+          <!-- Corner ornaments -->
+          <div class="absolute top-0 left-0 w-28 opacity-20 pointer-events-none">
+            <svg viewBox="0 0 120 120" fill="none"><line x1="40" y1="0" x2="0" y2="40" stroke="#c9a227" stroke-width="1"/><line x1="80" y1="0" x2="0" y2="80" stroke="#c9a227" stroke-width="0.7"/><line x1="115" y1="0" x2="0" y2="115" stroke="#c9a227" stroke-width="0.5"/></svg>
+          </div>
+          <div class="absolute top-0 right-0 w-28 opacity-20 pointer-events-none" style="transform: scaleX(-1)">
+            <svg viewBox="0 0 120 120" fill="none"><line x1="40" y1="0" x2="0" y2="40" stroke="#c9a227" stroke-width="1"/><line x1="80" y1="0" x2="0" y2="80" stroke="#c9a227" stroke-width="0.7"/><line x1="115" y1="0" x2="0" y2="115" stroke="#c9a227" stroke-width="0.5"/></svg>
+          </div>
+
+          <div class="relative z-10 px-4">
+            <p class="text-xs text-yellow-400/60 uppercase tracking-[0.3em] font-semibold mb-3">Hasil Pemilihan Umum Raya</p>
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-white uppercase tracking-wide">
+              Hasil Pemilihan HIMA
+            </h1>
+          </div>
+        </div>
+
         <!-- Dropdown Pilih HIMA -->
-        <div class="max-w-2xl mx-auto px-4 pt-8 pb-4">
+        <div class="max-w-2xl mx-auto px-4 mb-8">
           <Select v-model="selectedHimaId">
-            <SelectTrigger class="w-full font-semibold text-base border-2"
-              :style="{ borderColor: colors.accent, color: colors.accent }">
+            <SelectTrigger
+              class="w-full font-semibold text-sm h-11 rounded-xl transition-all"
+              :style="{
+                background: 'rgba(255,255,255,0.04)',
+                border: `1.5px solid ${colors.accent}55`,
+                color: colors.accent
+              }">
               <SelectValue placeholder="Pilih Himpunan Mahasiswa (HIMA)" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent class="bg-[#141836] border-yellow-900/30">
               <SelectGroup>
-                <SelectLabel>Daftar Pemilihan HIMA</SelectLabel>
+                <SelectLabel class="text-yellow-400/50 text-xs uppercase tracking-widest">Daftar Pemilihan HIMA</SelectLabel>
                 <SelectItem
                   v-for="kegiatan in processedKegiatans"
                   :key="kegiatan.id"
-                  :value="kegiatan.id.toString()">
+                  :value="kegiatan.id.toString()"
+                  class="text-white/80 focus:text-yellow-400 focus:bg-white/5">
                   {{ kegiatan.nama }}
                 </SelectItem>
               </SelectGroup>
@@ -108,36 +136,43 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
           </Select>
         </div>
 
-        <!-- Konten Hasil HIMA -->
-        <div v-if="selectedKegiatan" class="max-w-4xl mx-auto px-4">
+        <!-- Hasil HIMA yang dipilih -->
+        <div v-if="selectedKegiatan" class="max-w-3xl mx-auto px-4">
 
-          <!-- Header Banner HIMA -->
-          <div class="relative rounded-2xl overflow-hidden mb-8 py-10"
-            :style="{ background: `linear-gradient(135deg, ${colors.from}, ${colors.to})` }">
-            <img src="/logo-pemira.svg" alt=""
-              class="absolute inset-0 w-full h-full object-contain opacity-10 scale-110">
-            <div class="relative z-10 text-center">
-              <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-white uppercase tracking-wide drop-shadow-lg">
+          <!-- Header banner HIMA -->
+          <div class="relative rounded-2xl overflow-hidden mb-6 py-8 text-center"
+            :style="{ background: `linear-gradient(135deg, ${colors.from}cc, ${colors.to}99)` }"
+            style="border: 1px solid rgba(255,255,255,0.1);">
+            <img src="/Logo pemira.png" alt=""
+              class="absolute inset-0 w-full h-full object-contain opacity-10 scale-110 pointer-events-none">
+            <div class="relative z-10 px-4">
+              <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-wide drop-shadow-lg">
                 {{ selectedKegiatan.nama }}
-              </h1>
-              <p class="text-white/80 mt-2 font-medium">
-                Total Suara Masuk: <span class="font-bold text-white text-lg">{{ selectedKegiatan.totalSuara }}</span>
-              </p>
+              </h2>
+              <div class="inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full text-sm font-semibold"
+                style="background: rgba(0,0,0,0.3); color: white;">
+                <span class="size-1.5 rounded-full bg-white animate-pulse inline-block"></span>
+                {{ selectedKegiatan.totalSuara }} Suara Masuk
+              </div>
             </div>
           </div>
 
           <!-- Kartu Kandidat -->
-          <div class="space-y-5">
+          <div class="space-y-4">
             <div
               v-for="(calon, i) in selectedKegiatan.kandidat"
               :key="calon.id"
-              class="relative rounded-2xl overflow-hidden border transition-all duration-300"
-              :class="isWinner(calon.jumlah_suara_persen) ? 'shadow-lg scale-[1.01]' : 'opacity-80'"
-              :style="{
-                borderColor: isWinner(calon.jumlah_suara_persen) ? colors.accent : 'transparent',
-                boxShadow: isWinner(calon.jumlah_suara_persen) ? `0 0 24px ${colors.glow}` : 'none',
-                background: 'var(--color-card)'
-              }">
+              class="relative rounded-2xl overflow-hidden transition-all duration-300 pemira-card"
+              :class="isWinner(calon.jumlah_suara_persen) ? 'scale-[1.01]' : 'opacity-75'"
+              :style="isWinner(calon.jumlah_suara_persen)
+                ? `border-color: ${colors.accent}99; box-shadow: 0 0 28px ${colors.glow};`
+                : 'border-color: rgba(255,255,255,0.06);'"
+            >
+              <!-- Winner glow overlay -->
+              <div v-if="isWinner(calon.jumlah_suara_persen)"
+                class="absolute inset-0 pointer-events-none rounded-2xl"
+                :style="{ background: `linear-gradient(135deg, ${colors.from}22 0%, transparent 60%)` }">
+              </div>
 
               <!-- Badge Unggul -->
               <div v-if="isWinner(calon.jumlah_suara_persen)"
@@ -157,7 +192,7 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
                       alt="">
                   </div>
                   <!-- Nomor urut -->
-                  <div class="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                  <div class="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs"
                     :style="{ background: colors.to }">
                     {{ i + 1 }}
                   </div>
@@ -165,32 +200,34 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
 
                 <!-- Info & Bar -->
                 <div class="flex-1 min-w-0">
-                  <h3 class="font-bold text-base sm:text-lg truncate">
+                  <h3 class="font-bold text-base sm:text-lg text-white truncate">
                     {{ calon.mahasiswa![0].nama }}
                   </h3>
-                  <p class="text-sm opacity-60 mb-3">
+                  <p class="text-sm text-white/40 mb-4">
                     {{ calon.mahasiswa![0].programStudi?.nama ?? calon.mahasiswa![0].program_studi?.nama }}
                     &middot; Angkatan {{ calon.mahasiswa![0].angkatan.toString().substring(2, 4) }}
                   </p>
 
                   <!-- Horizontal Progress Bar -->
                   <div class="flex items-center gap-3">
-                    <div class="flex-1 h-5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                    <div class="flex-1 h-4 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.07);">
                       <div
                         class="h-full rounded-full transition-all duration-700"
                         :style="{
                           width: `${calon.jumlah_suara_persen}%`,
-                          background: `linear-gradient(90deg, ${colors.from}, ${colors.to})`
+                          background: isWinner(calon.jumlah_suara_persen)
+                            ? `linear-gradient(90deg, ${colors.from}, ${colors.accent})`
+                            : 'rgba(255,255,255,0.2)'
                         }">
                       </div>
                     </div>
                     <span class="font-bold text-sm sm:text-base w-16 text-right flex-shrink-0"
-                      :style="{ color: colors.accent }">
+                      :style="{ color: isWinner(calon.jumlah_suara_persen) ? colors.accent : 'rgba(255,255,255,0.4)' }">
                       {{ calon.jumlah_suara_persen }}%
                     </span>
                   </div>
 
-                  <p class="text-xs opacity-50 mt-1">{{ calon.jumlah_suara }} suara</p>
+                  <p class="text-xs text-white/30 mt-1.5">{{ calon.jumlah_suara }} suara</p>
                 </div>
               </div>
             </div>

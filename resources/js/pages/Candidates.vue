@@ -1,12 +1,7 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, Kandidat, Kegiatan } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { CheckCircle2, Target, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 // Page title and breadcrumbs
@@ -28,7 +23,6 @@ const kandidat = computed(() => {
     });
 });
 
-// Function to format misi
 const formatMisi = (misi: string): string[] => {
     const misiItems = misi.split(/\d+\.\s/).filter(item => item.trim());
     return misiItems.map(item => item.trim());
@@ -48,8 +42,12 @@ const handleProgramStudi = (id_program_studi: number) => {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Kandidat Pemilihan',
-        href: '/candidates/{slug}',
+        title: 'Kembali',
+        href: '/dashboard',
+    },
+    {
+        title: `Kandidat ${props.kegiatan.nama}`,
+        href: `/candidates/${props.kegiatan.nama.toLowerCase().replace(/\s+/g, '-')}`,
     },
 ];
 </script>
@@ -58,165 +56,119 @@ const breadcrumbs: BreadcrumbItem[] = [
     <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-col gap-2 overflow-x-hidden">
-            <!-- Hero Section -->
-            <div class="relative flex flex-col items-center justify-center">
-                <div class="w-full flex justify-between items-start relative">
-                    <img src="/images/corner-image.png" alt="" class="w-20 sm:w-40 lg:w-50">
-                    <img :src="`/images/${kegiatan.foto.replace('jpg', 'png')}`" alt="" class="h-20 sm:h-50 my-auto">
-                    <img src="/images/corner-image.png" alt="" class="w-20 sm:w-40 lg:w-50 transform -scale-x-100">
-                    <h1 class="text-xl sm:text-3xl lg:text-4xl font-bold text-center text-primary text-shadow-sm text-shadow-background uppercase absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2
-                            drop-shadow-[0_2px_4px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+        <div class="flex h-full flex-col gap-0 overflow-x-hidden">
+
+            <!-- ===== PAGE HEADER ===== -->
+            <div class="relative flex items-center justify-center py-8 px-4 overflow-hidden">
+                <div class="absolute top-0 left-0 w-20 h-20 opacity-20"
+                    style="background: linear-gradient(135deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 0 100%);"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 opacity-20"
+                    style="background: linear-gradient(225deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 100% 100%);"></div>
+
+                <div class="relative z-10 text-center">
+                    <img :src="`/images/${kegiatan.foto?.replace('jpg', 'png') ?? 'background-logo-dpm.png'}`" alt=""
+                        class="size-14 mx-auto drop-shadow-lg mb-3" onerror="this.style.display='none'" />
+                    <p class="text-xs text-white/40 uppercase tracking-widest">Pemilihan Umum Raya · FMIPA</p>
+                    <h1 class="text-xl sm:text-2xl font-black text-white uppercase poppins-font mt-1">
                         {{ kegiatan.nama }}
                     </h1>
                 </div>
             </div>
 
-            <!-- Kandidat Cards -->
-            <div class="flex flex-col gap-4 mx-auto w-full max-w-7xl px-4 py-8 md:py-12 space-y-8">
-                <h1 class="text-xl font-bold md:text-2xl text-center">Kandidat {{ props.kegiatan.nama }}</h1>
-                <Card v-for="(k, index) in kandidat" :key="k.id"
-                    class="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 py-0"
-                    :class="index % 2 === 0 ? 'hover:border-primary/50' : 'hover:border-secondary/50'">
+            <!-- ===== KANDIDAT CARDS ===== -->
+            <div class="max-w-3xl mx-auto w-full px-4 pb-12 space-y-6">
+                <h2 class="text-base font-bold text-center text-white/60 mb-6">
+                    Kandidat <span class="text-yellow-400">{{ kegiatan.nama }}</span>
+                </h2>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-12 items-start gap-0">
-                        <!-- Foto Section -->
-                        <div :class="`lg:col-span-4 relative ${index % 2 !== 0 ? 'lg:order-last' : ''}`">
-                            <!-- Mobile View - Full Image with Overlay -->
-                            <div class="relative h-64 min-h-[400px] lg:hidden">
-                                <img :src="k.foto !== null ? `/storage/${k.foto}` : '/images/blank-profile-picture.webp'"
-                                    alt="Foto Kandidat" class="absolute inset-0 w-full h-full object-cover md:object-contain" />
+                <div v-for="(k, index) in kandidat" :key="k.id"
+                    class="pemira-card rounded-2xl overflow-hidden hover:border-yellow-400/30 transition-all duration-300">
 
-                                <!-- Gradient Overlay -->
-                                <div class="absolute inset-0 bg-linear-to-t from-black/60 to-transparent">
+                    <div class="p-6">
+                        <!-- Header row: photo + name + badges -->
+                        <div class="flex items-start gap-4 mb-5">
+                            <!-- Circular photo with number badge -->
+                            <div class="relative flex-shrink-0">
+                                <div class="size-20 sm:size-24 rounded-full overflow-hidden border-2 border-yellow-400/20">
+                                    <img :src="k.foto !== null ? `/storage/${k.foto}` : '/images/blank-profile-picture.webp'"
+                                        alt="Foto Kandidat"
+                                        class="w-full h-full object-cover" />
                                 </div>
-
-                                <!-- Nomor Urut Badge - Mobile -->
-                                <div class="absolute top-4 left-4 z-10">
-                                    <div
-                                        class="bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold text-lg shadow-xl flex items-center gap-1.5">
-                                        <span class="text-xs opacity-75">No.</span>
-                                        <span>{{ k.no_urut }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Nama di Mobile (overlay di foto) -->
-                                <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-                                    <h2 class="text-xl font-bold mb-1">
-                                        <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim">
-                                            {{ mhs.nama }}
-                                            <span v-if="idx < k.mahasiswa.length - 1"> & </span>
-                                        </span>
-                                    </h2>
-                                    <p class="text-sm opacity-90">
-                                        <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim">
-                                            {{ handleProgramStudi(mhs.id_program_studi) }}' {{ mhs.angkatan.toString().slice(-2) }}
-                                            <span v-if="idx < k.mahasiswa.length - 1"> | </span>
-                                        </span>
-                                    </p>
+                                <!-- Number badge -->
+                                <div class="absolute -top-1 -right-1 size-7 rounded-full flex items-center justify-center text-white font-black text-xs poppins-font"
+                                    style="background: linear-gradient(135deg, #c9a227, #f0c040);">
+                                    {{ k.no_urut }}
                                 </div>
                             </div>
 
-                            <!-- Desktop View - Circular Avatar -->
-                            <div class="hidden lg:flex lg:flex-col lg:items-center lg:justify-center lg:p-10 lg:h-full relative">
-                                <div class="relative">
-                                    <!-- Circular Photo -->
-                                    <div class="size-72 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl">
-                                        <img :src="k.foto !== null ? `/storage/${k.foto}` : '/images/blank-profile-picture.webp'"
-                                            alt="Foto Kandidat" 
-                                            class="w-full h-full object-cover" />
-                                    </div>
-                                    
-                                    <!-- Nomor Urut Badge - Desktop (Floating on Avatar) -->
-                                    <div class="absolute -top-2 -right-2">
-                                        <div class="bg-primary text-primary-foreground px-3 py-1.5 rounded-full font-bold text-sm shadow-lg flex items-center gap-1">
-                                            <span class="text-xs opacity-75">No.</span>
-                                            <span>{{ k.no_urut }}</span>
-                                        </div>
-                                    </div>
+                            <!-- Name & tags -->
+                            <div class="flex-1 min-w-0 pt-1">
+                                <h3 class="font-bold text-white text-base sm:text-lg leading-tight">
+                                    <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim">
+                                        {{ mhs.nama }}<span v-if="idx < k.mahasiswa.length - 1"> & </span>
+                                    </span>
+                                </h3>
+                                <div class="flex flex-wrap gap-1.5 mt-2">
+                                    <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-yellow-400/20 text-yellow-400/70"
+                                        style="background: rgba(201,162,39,0.08);">
+                                        {{ handleProgramStudi(mhs.id_program_studi) }}'{{ mhs.angkatan.toString().slice(-2) }} —
+                                        Calon {{ mhs.pivot.jabatan.charAt(0).toUpperCase() + mhs.pivot.jabatan.slice(1) }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Content Section -->
-                        <div class="lg:col-span-8 p-6 md:p-8 lg:p-10">
-                            <!-- Header - Hidden di mobile karena ada di foto -->
-                            <div class="hidden lg:block mb-6">
-                                <div class="flex items-start justify-between mb-4">
-                                    <div>
-                                        <h2 class="text-2xl font-bold mb-2 text-foreground">
-                                            <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim">
-                                                {{ mhs.nama }}
-                                                <span v-if="idx < k.mahasiswa.length - 1"> & </span>
-                                            </span>
-                                        </h2>
-                                        <div class="flex flex-wrap gap-2">
-                                            <Badge v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim" variant="secondary"
-                                                class="text-sm">
-                                                <Users class="w-3 h-3 mr-1" />
-                                                {{ handleProgramStudi(mhs.id_program_studi) }}' {{ mhs.angkatan.toString().slice(-2) }} - Calon {{ mhs.pivot.jabatan.charAt(0).toUpperCase() + mhs.pivot.jabatan.slice(1) }}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-                                <Separator class="my-4" />
-                            </div>
+                        <!-- Divider -->
+                        <div class="h-px w-full mb-5" style="background: linear-gradient(90deg, transparent, rgba(201,162,39,0.2), transparent);"></div>
 
-                            <!-- Visi Section -->
-                            <div class="mb-8">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="p-2 bg-primary/10 rounded-lg">
-                                        <Target class="w-5 h-5 text-primary" />
-                                    </div>
-                                    <h3 class="text-xl font-bold text-primary">Visi</h3>
+                        <!-- Visi -->
+                        <div class="mb-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="size-5 rounded-full border border-yellow-400/40 flex items-center justify-center flex-shrink-0">
+                                    <div class="size-1.5 rounded-full bg-yellow-400"></div>
                                 </div>
-                                <p class="text-base leading-relaxed text-muted-foreground lg:pl-11">
-                                    {{ k.visi }}
-                                </p>
+                                <h4 class="text-sm font-bold text-yellow-400">Visi</h4>
                             </div>
+                            <p class="text-sm text-white/60 leading-relaxed pl-7">
+                                {{ k.visi }}
+                            </p>
+                        </div>
 
-                            <!-- Misi Section -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-4">
-                                    <div class="p-2 bg-primary/10 rounded-lg">
-                                        <CheckCircle2 class="w-5 h-5 text-primary" />
-                                    </div>
-                                    <h3 class="text-xl font-bold text-primary">Misi</h3>
+                        <!-- Misi -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="size-5 rounded-full border border-yellow-400/40 flex items-center justify-center flex-shrink-0">
+                                    <div class="size-1.5 rounded-full bg-yellow-400"></div>
                                 </div>
-                                <ol class="space-y-3 pl-2 lg:pl-10">
-                                    <li v-for="(misiItem, idx) in formatMisi(k.misi)" :key="idx"
-                                        class="flex items-start gap-3 text-base text-muted-foreground">
-                                        <span
-                                            class="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold">
-                                            {{ idx + 1 }}
-                                        </span>
-                                        <span class="leading-relaxed">{{ misiItem }}</span>
-                                    </li>
-                                </ol>
+                                <h4 class="text-sm font-bold text-yellow-400">Misi</h4>
                             </div>
+                            <ol class="space-y-2 pl-7">
+                                <li v-for="(misiItem, idx) in formatMisi(k.misi)" :key="idx"
+                                    class="flex items-start gap-2.5 text-sm text-white/60 leading-relaxed">
+                                    <span class="flex-shrink-0 size-5 rounded-full border border-yellow-400/20 text-yellow-400/70 flex items-center justify-center text-xs font-semibold">
+                                        {{ idx + 1 }}
+                                    </span>
+                                    <span>{{ misiItem }}</span>
+                                </li>
+                            </ol>
                         </div>
                     </div>
-                </Card>
+                </div>
             </div>
 
-            <!-- CTA Buttons -->
-            <div class="mx-auto w-full max-w-md px-4 pb-12">
-                <div class="grid grid-cols-2 gap-4">
-                    <Link :href="route('dashboard')" class="w-full">
-                        <Button variant="outline" size="lg" class="w-full border-2 hover:bg-primary/5">
-                            <span class="flex text-base items-center gap-2">
-                                Ke Beranda
-                            </span>
-                        </Button>
-                    </Link>
-                    <Link :href="route('terms')" class="w-full">
-                        <Button variant="default" size="lg" class="w-full shadow-lg hover:shadow-xl transition-shadow">
-                            <span class="flex text-base items-center gap-2">
-                                Ke Pemilihan
-                            </span>
-                        </Button>
-                    </Link>
-                </div>
+            <!-- ===== CTA BUTTONS ===== -->
+            <div class="max-w-sm mx-auto w-full px-4 pb-12 grid grid-cols-2 gap-4">
+                <Link :href="route('dashboard')" class="w-full">
+                    <button class="w-full py-3 rounded-full text-sm font-semibold text-white/50 border border-white/15 hover:border-yellow-400/30 hover:text-yellow-400 transition-all">
+                        ← Ke Beranda
+                    </button>
+                </Link>
+                <Link :href="route('terms')" class="w-full">
+                    <button class="w-full py-3 rounded-full text-sm font-bold btn-gold">
+                        Ke Pemilihan ➜
+                    </button>
+                </Link>
             </div>
         </div>
     </AppLayout>

@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import dayjs from 'dayjs';
 import AppLayout from '@/layouts/AppLayout.vue';
-import Button from '@/components/ui/button/Button.vue';
 import { type BreadcrumbItem, Kegiatan } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import Autoplay from "embla-carousel-autoplay"
-import { Carousel, CarouselContent, CarouselItem, } from "@/components/ui/carousel"
-
-const plugin = Autoplay({
-    delay: 5000,
-    stopOnMouseEnter: true,
-    stopOnInteraction: false,
-})
 
 // define props
 const props = defineProps<{
@@ -37,11 +27,9 @@ const filteredKegiatan = computed(() => {
     if (!auth.value.user) return [];
 
     return props.kegiatan.filter(item => {
-        // Always show fakultas level activities
         if (item.ruang_lingkup === 'fakultas') {
             return true;
         }
-        // Show program studi level activities only for matching program studi
         if (item.ruang_lingkup === 'program studi') {
             return item.id_program_studi === auth.value.user.id_program_studi;
         }
@@ -70,7 +58,6 @@ const timeRemaining = computed(() => {
     return { days, hours, minutes, seconds, expired: false };
 });
 
-// Add a function to calculate time difference for individual activities
 const getTimeUntilStart = (startTime: Date, endTime: Date) => {
     const target = new Date(startTime);
     const now = currentTime.value;
@@ -100,14 +87,10 @@ const getTimeUntilStart = (startTime: Date, endTime: Date) => {
     return { text, expired: false };
 };
 
-
-
-// Helper function to format time values
 const formatTime = (time: number) => {
     return time.toString().padStart(2, '0');
 };
 
-// Set up interval to update current time every second
 onMounted(() => {
     interval = setInterval(() => {
         currentTime.value = new Date();
@@ -144,12 +127,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
 ];
-
-const heroImages = [
-    '/images/foto-slide-hero/IMG_2.webp',
-    '/images/foto-slide-hero/IMG_1.webp',
-    '/images/foto-slide-hero/IMG_3.webp',
-]
 </script>
 
 <template>
@@ -157,136 +134,133 @@ const heroImages = [
     <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-8 overflow-hidden">
-            <!-- Countdown timer -->
-            <div class="relative min-h-[90vh] flex flex-1 justify-center items-center">
-                <!-- Content with relative positioning and higher z-index -->
-                <Carousel class="absolute w-full saturate-0 md:saturate-0 md:backdrop-blur" :plugins="[plugin]"
-                    @mouseenter="plugin.stop" @mouseleave="[plugin.reset(), plugin.play()]">
-                    <CarouselContent>
-                        <CarouselItem v-for="image in heroImages" :key="image">
-                            <div class="flex items-center justify-center">
-                                <Card class="w-full">
-                                    <CardContent class="flex items-center justify-center px-0">
-                                        <img :src="image" alt="Placeholder" class="w-full h-[90vh] object-cover opacity-30 mask-y-from-80% mask-y-to-100%" />
-                                        <!-- mask-linear-0 mask-linear-from-0% mask-linear-to-100% -->
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </CarouselItem>
-                    </CarouselContent>
-                </Carousel>
+        <div class="flex h-full flex-1 flex-col gap-0 overflow-hidden">
 
-                <div class="relative z-10 px-4 space-y-4 md:space-y-6 flex flex-col items-center justify-center">
-                    <!-- Header -->
-                    <div class="stroke-black-500 text-center text-shadow-md text-shadow-foreground/30">
-                        <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-foreground/50 mb-2">
-                            PEMIRA FMIPA
-                        </h2>
-                        <p class="text-foreground/50 font-medium text-sm md:text-base max-w-lg">
-                            Pemilihan Umum Raya Fakultas Matematika dan Ilmu Pengetahuan Alam {{ dayjs().year() }} akan dimulai dalam
+            <!-- ===== HERO SECTION ===== -->
+            <div class="relative min-h-[88vh] flex flex-col items-center justify-center overflow-hidden px-4">
+
+                <!-- Center content -->
+                <div class="relative z-10 flex flex-col items-center justify-center gap-6 text-center max-w-2xl">
+                    <!-- Logo glowing -->
+                    <div class="relative">
+                        <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, rgba(201,162,39,0.3) 0%, transparent 70%); transform: scale(2.5); animation: shimmer-gold 3s ease-in-out infinite;"></div>
+                        <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                            class="relative size-24 sm:size-28 lg:size-32 drop-shadow-2xl object-contain"
+                            onerror="this.style.display='none'" />
+                    </div>
+
+                    <!-- Decorative 4-pointed stars -->
+                    <div class="star-4 absolute -top-2 left-[20%] size-4 bg-yellow-400/30" style="animation: float-star 5s ease-in-out infinite;"></div>
+                    <div class="star-4 absolute top-8 right-[18%] size-3 bg-yellow-400/20" style="animation: float-star 7s ease-in-out infinite 1s;"></div>
+
+                    <!-- Heading -->
+                    <div class="space-y-2">
+                        <p class="text-xs sm:text-sm font-semibold uppercase tracking-[0.3em] text-white/50">Pemilihan Umum Raya</p>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black uppercase leading-tight poppins-font">
+                            <span class="text-white">PEMIRA LM</span><br/>
+                            <span class="text-gold-light" style="color: #f0c040;">FMIPA {{ dayjs().year() }}</span>
+                        </h1>
+                    </div>
+
+                    <!-- Tagline -->
+                    <div class="space-y-1">
+                        <p class="text-sm sm:text-base text-white/60">
+                            Saatnya suaramu menentukan arah kepemimpinan Lembaga Mahasiswa
+                        </p>
+                        <p class="text-sm sm:text-base text-white/50">
+                            Fakultas Matematika dan Ilmu Pengetahuan Alam
                         </p>
                     </div>
 
-                    <!-- Countdown Display -->
-                    <div class="flex justify-center space-x-4 items-start text-shadow-md text-shadow-foreground/30">
-                        <!-- Days -->
+                    <!-- Countdown (if not expired) -->
+                    <div v-if="!timeRemaining.expired" class="flex items-center gap-4 sm:gap-6">
                         <div class="text-center">
-                            <p class="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground/50">
-                                {{ formatTime(timeRemaining.days) }}
-                            </p>
-                            <p class="text-sm lg:text-base text-foreground/50 font-medium mt-2">
-                                Hari
-                            </p>
+                            <div class="text-3xl sm:text-4xl font-black text-yellow-400 poppins-font">{{ formatTime(timeRemaining.days) }}</div>
+                            <div class="text-xs text-white/40 uppercase tracking-wider mt-1">Hari</div>
                         </div>
-
-                        <div class="pt-2 text-xl md:text-2xl lg:text-3xl font-bold text-foreground/50">:</div>
-
-                        <!-- Hours -->
+                        <div class="text-2xl text-yellow-400/40 font-bold">:</div>
                         <div class="text-center">
-                            <p class="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground/50">
-                                {{ formatTime(timeRemaining.hours) }}
-                            </p>
-                            <p class="text-sm lg:text-base text-foreground/50 font-medium mt-2">
-                                Jam
-                            </p>
+                            <div class="text-3xl sm:text-4xl font-black text-yellow-400 poppins-font">{{ formatTime(timeRemaining.hours) }}</div>
+                            <div class="text-xs text-white/40 uppercase tracking-wider mt-1">Jam</div>
                         </div>
-
-                        <div class="pt-2 text-xl md:text-2xl lg:text-3xl font-bold text-foreground/50">:</div>
-
-                        <!-- Minutes -->
+                        <div class="text-2xl text-yellow-400/40 font-bold">:</div>
                         <div class="text-center">
-                            <p class="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground/50">
-                                {{ formatTime(timeRemaining.minutes) }}
-                            </p>
-                            <p class="text-sm lg:text-base text-foreground/50 font-medium mt-2">
-                                Menit
-                            </p>
+                            <div class="text-3xl sm:text-4xl font-black text-yellow-400 poppins-font">{{ formatTime(timeRemaining.minutes) }}</div>
+                            <div class="text-xs text-white/40 uppercase tracking-wider mt-1">Menit</div>
                         </div>
-
-                        <div class="pt-2 text-xl md:text-2xl lg:text-3xl font-bold text-foreground/50">:</div>
-
-                        <!-- Seconds -->
+                        <div class="text-2xl text-yellow-400/40 font-bold">:</div>
                         <div class="text-center">
-                            <p class="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground/50">
-                                {{ formatTime(timeRemaining.seconds) }}
-                            </p>
-                            <p class="text-sm lg:text-base text-foreground/50 font-medium mt-2">
-                                Detik
-                            </p>
+                            <div class="text-3xl sm:text-4xl font-black text-yellow-400 poppins-font">{{ formatTime(timeRemaining.seconds) }}</div>
+                            <div class="text-xs text-white/40 uppercase tracking-wider mt-1">Detik</div>
                         </div>
                     </div>
 
-                    <!-- Status Message -->
+                    <!-- CTA Button -->
                     <Link :href="ctaLink">
-                    <Button variant="outline" size="lg"
-                        class="text-base dark:bg-foreground dark:text-background dark:border-foreground dark:hover:bg-foreground/80">
-                        Mulai Sekarang!
-                    </Button>
+                        <button class="btn-gold px-8 py-3 rounded-full text-sm font-bold tracking-wide shadow-lg" style="box-shadow: 0 0 30px rgba(201,162,39,0.4);">
+                            Masuk ke Bilik Suara ➜
+                        </button>
                     </Link>
+
+                    <!-- Sub tagline -->
+                    <p class="text-xs text-white/25 italic">
+                        Satu suara, satu harapan — berikan yang terbaik untuk FMIPA
+                    </p>
                 </div>
             </div>
 
-            <!-- List Kegiatan -->
-            <div v-if="auth.user && filteredKegiatan.length > 0" class="px-4">
-                <h1 class="text-lg md:text-xl lg:text-2xl mt-2 mb-6 font-bold text-center">Kegiatan Mendatang</h1>
-                <div class="max-w-7xl mb-6 w-full grid place-self-center auto-rows-min gap-4 md:grid-cols-2">
-                    <Card v-for="item in filteredKegiatan" :key="item.id" class="border shadow-sm shadow-foreground/10">
-                        <CardHeader>
-                            <img :src="`/storage/${item.foto}`" alt="" class="w-full h-64 object-cover rounded-md">
-                        </CardHeader>
-                        <CardContent class="space-y-2 px-6">
-                            <CardTitle class="text-lg md:text-xl">{{ item.nama }}</CardTitle>
-                            <CardDescription>
-                                {{ getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).expired ?
-                                    getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).text :
-                                    `Dimulai dalam ${getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).text}`
-                                }}
-                            </CardDescription>
-                        </CardContent>
-                        <CardFooter>
-                            <Link :href="candidateLink(item.nama)">
-                                <Button variant="default" size="default" class="w-full">
-                                    Lihat Kandidat
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
+            <!-- ===== KEGIATAN SECTION ===== -->
+            <div v-if="auth.user && filteredKegiatan.length > 0" class="px-4 py-12">
+                <div class="max-w-7xl mx-auto">
+                    <h2 class="text-xl md:text-2xl font-bold text-center text-white mb-8">
+                        <span class="text-yellow-400">Kegiatan</span> Yang Anda Dapat Ikuti
+                    </h2>
+                    <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+                        <div v-for="item in filteredKegiatan" :key="item.id"
+                            class="pemira-card rounded-xl overflow-hidden hover:border-yellow-400/40 transition-all duration-300">
+                            <div class="relative">
+                                <img :src="`/storage/${item.foto}`" alt="" class="w-full h-44 object-cover" />
+                                <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(14,18,55,0.8) 0%, transparent 60%);"></div>
+                                <div class="absolute bottom-3 left-4 right-4">
+                                    <p class="font-bold text-white text-sm">{{ item.nama }}</p>
+                                    <p class="text-xs text-yellow-400/80 mt-0.5">
+                                        {{ getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).expired ?
+                                            getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).text :
+                                            `Dimulai dalam ${getTimeUntilStart(item.waktu_mulai as Date, item.waktu_selesai as Date).text}`
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <Link :href="candidateLink(item.nama)">
+                                    <button class="w-full py-2 rounded-lg text-sm font-semibold text-white/70 border border-white/10 hover:border-yellow-400/40 hover:text-yellow-400 transition-all">
+                                        Lihat Kandidat
+                                    </button>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- FAQ Accordion -->
-            <div class="w-full md:max-w-7xl place-self-center px-4">
-                <h1 class="text-lg md:text-xl lg:text-2xl mt-2 mb-6 font-bold text-center">Yang Sering Ditanyakan</h1>
+            <!-- ===== FAQ SECTION ===== -->
+            <div class="px-4 py-12 max-w-4xl w-full mx-auto">
+                <h2 class="text-xl md:text-2xl font-bold text-center text-white mb-8">
+                    Yang <span class="text-yellow-400">Sering</span> Ditanyakan
+                </h2>
                 <Accordion type="single" class="w-full" collapsible :default-value="defaultValue">
-                    <AccordionItem v-for="item in accordionItems" :key="item.value" :value="item.value">
-                        <AccordionTrigger>{{ item.title }}</AccordionTrigger>
-                        <AccordionContent>
+                    <AccordionItem v-for="item in accordionItems" :key="item.value" :value="item.value"
+                        class="border-b border-white/10">
+                        <AccordionTrigger class="text-white/80 hover:text-yellow-400 text-left py-4 text-sm font-medium transition-colors [&[data-state=open]]:text-yellow-400">
+                            {{ item.title }}
+                        </AccordionTrigger>
+                        <AccordionContent class="text-white/50 text-sm pb-4 leading-relaxed">
                             {{ item.content }}
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
             </div>
+
         </div>
     </AppLayout>
 </template>
