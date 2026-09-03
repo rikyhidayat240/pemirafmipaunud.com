@@ -127,7 +127,7 @@ const frameImage = computed(() => {
                                 <div v-else>
                                     <img :src="kandidatList[0].foto ? `/storage/${kandidatList[0].foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidatList[0].no_urut}`"
-                                        class="absolute -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidatList[0].foto ? `max-h-32` : `max-h-24 right-4`" />
                                     <h1 class="absolute z-20 top-8 font-poppins font-black text-white text-[0.5rem] -rotate-90"
                                         style="text-shadow: 0px 6px 0px rgba(255,255,255,0.3), 0px 12px 0px rgba(255,255,255,0.1);">
@@ -201,7 +201,7 @@ const frameImage = computed(() => {
                                 <div v-else>
                                     <img :src="kandidatList[1].foto ? `/storage/${kandidatList[1].foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidatList[1].no_urut}`"
-                                        class="absolute -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidatList[1].foto ? `max-h-32` : `max-h-24 right-4`" />
                                     <h1 class="absolute z-20 top-8 font-poppins font-black text-white text-[0.5rem] -rotate-90"
                                         style="text-shadow: 0px 6px 0px rgba(255,255,255,0.3), 0px 12px 0px rgba(255,255,255,0.1);">
@@ -278,7 +278,7 @@ const frameImage = computed(() => {
                                 <div v-else>
                                     <img :src="kandidatList[0].foto ? `/storage/${kandidatList[0].foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidatList[0].no_urut}`"
-                                        class="absolute -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidatList[0].foto ? `max-h-40 sm:max-h-64 lg:max-h-80` : `max-h-24 sm:max-h-40 right-4 sm:right-8`" />
                                     <h1 class="absolute z-20 top-8 sm:top-16 lg:top-20 font-poppins font-black text-white text-xs sm:text-base lg:text-lg -rotate-90"
                                         style="text-shadow: 0px 12px 0px rgba(255,255,255,0.3), 0px 24px 0px rgba(255,255,255,0.1);">
@@ -370,7 +370,7 @@ const frameImage = computed(() => {
                                 <div v-else>
                                     <img :src="kandidatList[1].foto ? `/storage/${kandidatList[1].foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidatList[1].no_urut}`"
-                                        class="absolute -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidatList[1].foto ? `max-h-40 sm:max-h-64 lg:max-h-80` : `max-h-24 sm:max-h-40 right-4 sm:right-8`" />
                                     <h1 class="absolute z-20 top-8 sm:top-16 lg:top-20 font-poppins font-black text-white text-xs sm:text-base lg:text-lg -rotate-90"
                                         style="text-shadow: 0px 12px 0px rgba(255,255,255,0.3), 0px 24px 0px rgba(255,255,255,0.1);">
@@ -419,7 +419,7 @@ const frameImage = computed(() => {
                                 <div v-if="isFakultasLevel">
                                     <img :src="kandidat.foto ? `/storage/${kandidat.foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidat.no_urut}`"
-                                        class="absolute -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidat.foto ? `max-h-28` : `max-h-20 right-4`" />
                                     <h1 class="absolute z-20 top-8 font-poppins font-black text-white text-[0.5rem] -rotate-90"
                                         style="text-shadow: 0px 6px 0px rgba(255,255,255,0.3), 0px 12px 0px rgba(255,255,255,0.1);">
@@ -434,7 +434,7 @@ const frameImage = computed(() => {
                                 <div v-else>
                                     <img :src="kandidat.foto ? `/storage/${kandidat.foto}` : `/images/kotak-kosong.webp`"
                                         :alt="`Kandidat ${kandidat.no_urut}`"
-                                        class="absolute -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                        class="absolute bottom-0 -right-1 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                         :class="kandidat.foto ? `max-h-32` : `max-h-20 right-4`" />
                                     <h1 class="absolute z-20 top-8 font-poppins font-black text-white text-[0.5rem] -rotate-90"
                                         style="text-shadow: 0px 6px 0px rgba(255,255,255,0.3), 0px 12px 0px rgba(255,255,255,0.1);">
@@ -497,7 +497,7 @@ const frameImage = computed(() => {
                                     <div v-if="isFakultasLevel">
                                         <img :src="kandidat.foto ? `/storage/${kandidat.foto}` : `/images/kotak-kosong.webp`"
                                             :alt="`Kandidat ${kandidat.no_urut}`"
-                                            class="absolute -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                            class="absolute bottom-0 -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                             :class="kandidat.foto ? `max-h-32 sm:max-h-48` : `max-h-24 sm:max-h-40 right-4 sm:right-8`" />
                                         <h1 class="absolute z-20 top-6 sm:top-12 lg:top-16 font-poppins font-black text-white text-[0.6rem] sm:text-sm lg:text-base -rotate-90"
                                             style="text-shadow: 0px 12px 0px rgba(255,255,255,0.3), 0px 24px 0px rgba(255,255,255,0.1);">
@@ -512,7 +512,7 @@ const frameImage = computed(() => {
                                     <div v-else>
                                         <img :src="kandidat.foto ? `/storage/${kandidat.foto}` : `/images/kotak-kosong.webp`"
                                             :alt="`Kandidat ${kandidat.no_urut}`"
-                                            class="absolute -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
+                                            class="absolute bottom-0 -right-1 sm:-right-2 w-auto place-self-end border-none mask-linear-180 mask-linear-from-40% mask-linear-to-85%"
                                             :class="kandidat.foto ? `max-h-40 sm:max-h-56` : `max-h-24 sm:max-h-40 right-4 sm:right-8`" />
                                         <h1 class="absolute z-20 top-10 sm:top-12 lg:top-14 font-poppins font-black text-white text-xs sm:text-base -rotate-90"
                                             style="text-shadow: 0px 12px 0px rgba(255,255,255,0.3), 0px 24px 0px rgba(255,255,255,0.1);">

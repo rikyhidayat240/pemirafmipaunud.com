@@ -15,15 +15,30 @@ class BerandaController extends Controller
     {
         $user = User::where('nim', auth('web')->user()->nim)->first();
         if ($user->is_admin) return Kegiatan::all();
-        $kegiatan = $user->kegiatan()
-            ->where('waktu_selesai', '>', now())
+        
+        $kegiatan = Kegiatan::where('waktu_selesai', '>', now())
+            ->where(function ($query) use ($user) {
+                $query->where('ruang_lingkup', 'fakultas')
+                      ->orWhere(function ($q) use ($user) {
+                          $q->where('ruang_lingkup', 'program studi')
+                            ->where('id_program_studi', $user->id_program_studi);
+                      });
+            })
             ->get();
-        if (!$kegiatan) {
-            $kegiatan = $user->kegiatan()
-                ->latest('waktu_selesai')
-                ->limit(2)
-                ->get();
+            
+        if ($kegiatan->isEmpty()) {
+            $kegiatan = Kegiatan::where(function ($query) use ($user) {
+                $query->where('ruang_lingkup', 'fakultas')
+                      ->orWhere(function ($q) use ($user) {
+                          $q->where('ruang_lingkup', 'program studi')
+                            ->where('id_program_studi', $user->id_program_studi);
+                      });
+            })
+            ->latest('waktu_selesai')
+            ->limit(2)
+            ->get();
         }
+        
         return $kegiatan;
     }
 

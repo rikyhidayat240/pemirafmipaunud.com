@@ -29,59 +29,54 @@ class SuratSuaraController extends Controller
             return redirect()->back()->with('alert', ['type' => 'error', 'title' => 'Akun Tidak Aktif', 'message' => 'Anda tidak terdaftar sebagai mahasiswa aktif sehingga tidak dapat melakukan pemilihan.']);
         }
 
-        // Cache kegiatan BEM (fakultas level) for 24 hours
-        $kegiatanBem = \Illuminate\Support\Facades\Cache::remember('kegiatan_bem_' . date('Y'), 60 * 60 * 24, function () {
-            return Kegiatan::where('tahun', date('Y'))
-                ->where('waktu_selesai', '>', now())
-                ->where('ruang_lingkup', 'fakultas')
-                ->with(['kandidat.mahasiswa', 'programStudi'])
-                ->first();
-        });
+        // Fetch kegiatan BEM (fakultas level) without cache to prevent stale data when events are newly created
+        $kegiatanBem = Kegiatan::where('tahun', date('Y'))
+            ->where('waktu_selesai', '>', now())
+            ->where('ruang_lingkup', 'fakultas')
+            ->with(['kandidat.mahasiswa', 'programStudi'])
+            ->first();
 
-        // Cache kegiatan HIMA (program studi level) for 24 hours
-        $kegiatanHima = \Illuminate\Support\Facades\Cache::remember('kegiatan_hima_' . date('Y') . '_prodi_' . $user->id_program_studi, 60 * 60 * 24, function () use ($user) {
-            return Kegiatan::where('tahun', date('Y'))
-                ->where('waktu_selesai', '>', now())
-                ->where('ruang_lingkup', 'program studi')
-                ->where('id_program_studi', $user->id_program_studi)
-                ->with(['kandidat.mahasiswa', 'programStudi'])
-                ->first();
-        });
+        // Fetch kegiatan HIMA (program studi level) without cache
+        $kegiatanHima = Kegiatan::where('tahun', date('Y'))
+            ->where('waktu_selesai', '>', now())
+            ->where('ruang_lingkup', 'program studi')
+            ->where('id_program_studi', $user->id_program_studi)
+            ->with(['kandidat.mahasiswa', 'programStudi'])
+            ->first();
 
-        // 1. Check if kegiatan exists
-        if (!$kegiatanBem || !$kegiatanHima) {
+        // 1. Check if ANY kegiatan exists
+        if (!$kegiatanBem && !$kegiatanHima) {
             return redirect()->route('dashboard')
                 ->with('alert', ['type' => 'error', 'title' => 'Tidak Ada Kegiatan Pemilihan', 'message' => 'Saat ini tidak ada kegiatan pemilihan yang aktif.']);
         }
 
-        // 2. Check if user has valid ballot (surat suara) using loaded relation in memory
-        $hasBallotBem = $user->kegiatan->contains('id', $kegiatanBem->id);
-        $hasBallotHima = $user->kegiatan->contains('id', $kegiatanHima->id);
+        // 2. Check if kegiatan has started
+        $bemStarted = $kegiatanBem ? now()->gte($kegiatanBem->waktu_mulai) : false;
+        $himaStarted = $kegiatanHima ? now()->gte($kegiatanHima->waktu_mulai) : false;
 
-        if (!$hasBallotBem || !$hasBallotHima) {
-            return redirect()->route('dashboard')
-                ->with('alert', ['type' => 'error', 'title' => 'Tidak Ada Surat Suara', 'message' => 'Anda tidak memiliki surat suara untuk pemilihan ini.']);
-        }
-
-        // 3. Check if kegiatan has started
-        if (now()->lt($kegiatanBem->waktu_mulai) || now()->lt($kegiatanHima->waktu_mulai)) {
+        // If neither has started, but at least one exists
+        if (!$bemStarted && !$himaStarted) {
             return redirect()->route('dashboard')
                 ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Belum Dimulai', 'message' => 'Kegiatan pemilihan belum dimulai. Silakan coba lagi nanti.']);
         }
 
-        // 4. Check if user has already voted using loaded relation in memory
-        $hasVotedBem = $user->kegiatan->contains(function ($kegiatan) use ($kegiatanBem) {
+        // 3. Check if user has already voted using loaded relation in memory
+        $hasVotedBem = $kegiatanBem ? $user->kegiatan->contains(function ($kegiatan) use ($kegiatanBem) {
             return $kegiatan->id === $kegiatanBem->id && $kegiatan->pivot->has_vote;
-        });
+        }) : true; // default to true if it doesn't exist so we skip it
 
-        $hasVotedHima = $user->kegiatan->contains(function ($kegiatan) use ($kegiatanHima) {
+        $hasVotedHima = $kegiatanHima ? $user->kegiatan->contains(function ($kegiatan) use ($kegiatanHima) {
             return $kegiatan->id === $kegiatanHima->id && $kegiatan->pivot->has_vote;
-        });
+        }) : true;
 
         if ($hasVotedBem && $hasVotedHima) {
             return redirect()->route('dashboard')
-                ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda hanya dapat melakukan pemilihan sekali. Terima kasih telah berpartisipasi.']);
+                ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda sudah melakukan pemilihan untuk semua kegiatan yang tersedia. Terima kasih telah berpartisipasi.']);
         }
+
+        // If they already voted for one, or if it hasn't started yet, we can nullify it so it doesn't show in the Vote page
+        if ($hasVotedBem || !$bemStarted) $kegiatanBem = null;
+        if ($hasVotedHima || !$himaStarted) $kegiatanHima = null;
 
         return Inertia::render('Vote', [
             'kegiatanBem' => $kegiatanBem,
@@ -92,13 +87,17 @@ class SuratSuaraController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_kandidat_bem' => 'required|exists:kandidat,id',
-            'id_kandidat_hima' => 'required|exists:kandidat,id',
+            'id_kandidat_bem' => 'nullable|exists:kandidat,id',
+            'id_kandidat_hima' => 'nullable|exists:kandidat,id',
             'ttd' => 'required|string', // base64 data URL
         ]);
 
-        $kandidatBem = Kandidat::find($request->id_kandidat_bem);
-        $kandidatHima = Kandidat::find($request->id_kandidat_hima);
+        if (!$request->id_kandidat_bem && !$request->id_kandidat_hima) {
+            return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Tidak ada kandidat yang dipilih.']);
+        }
+
+        $kandidatBem = $request->id_kandidat_bem ? Kandidat::find($request->id_kandidat_bem) : null;
+        $kandidatHima = $request->id_kandidat_hima ? Kandidat::find($request->id_kandidat_hima) : null;
 
         $user = User::where('nim', auth('web')->user()->nim)->first();
 
@@ -107,17 +106,17 @@ class SuratSuaraController extends Controller
             
             // SECURITY FIX: Double Vote Check inside Transaction Lock
             // We check the database directly in this transaction to see if they already voted
-            $alreadyVotedBem = DB::table('mahasiswa_kegiatan')
+            $alreadyVotedBem = $kandidatBem ? DB::table('surat_suara')
                 ->where('nim', $user->nim)
                 ->where('id_kegiatan', $kandidatBem->id_kegiatan)
                 ->where('has_vote', true)
-                ->exists();
+                ->exists() : false;
 
-            $alreadyVotedHima = DB::table('mahasiswa_kegiatan')
+            $alreadyVotedHima = $kandidatHima ? DB::table('surat_suara')
                 ->where('nim', $user->nim)
                 ->where('id_kegiatan', $kandidatHima->id_kegiatan)
                 ->where('has_vote', true)
-                ->exists();
+                ->exists() : false;
 
             if ($alreadyVotedBem || $alreadyVotedHima) {
                 // If they already voted, abort the transaction and do NOT increment votes
@@ -145,14 +144,25 @@ class SuratSuaraController extends Controller
             }
 
             // Mark user as voted in pivot table
-            $user->kegiatan()->syncWithoutDetaching([
-                $kandidatBem->id_kegiatan => ['has_vote' => true, 'ttd' => $ttdPath],
-                $kandidatHima->id_kegiatan => ['has_vote' => true, 'ttd' => $ttdPath]
-            ]);
+            $syncData = [];
+            if ($kandidatBem) {
+                $syncData[$kandidatBem->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+            }
+            if ($kandidatHima) {
+                $syncData[$kandidatHima->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+            }
+            
+            if (!empty($syncData)) {
+                $user->kegiatan()->syncWithoutDetaching($syncData);
+            }
 
             // Increment candidate votes
-            $kandidatBem->increment('jumlah_suara');
-            $kandidatHima->increment('jumlah_suara');
+            if ($kandidatBem) {
+                $kandidatBem->increment('jumlah_suara');
+            }
+            if ($kandidatHima) {
+                $kandidatHima->increment('jumlah_suara');
+            }
 
             return Inertia::render('ThankYou');
         });

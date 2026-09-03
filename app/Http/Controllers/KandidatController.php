@@ -78,7 +78,7 @@ class KandidatController extends Controller
                 ->first();
             
             if ($existingKandidat) {
-                return redirect()->back()->with('error', 'Nomor urut sudah digunakan untuk kegiatan ini.');
+                return redirect()->back()->withErrors(['no_urut' => 'Nomor urut sudah digunakan untuk kegiatan ini.']);
             }
 
             // Store foto if exists
@@ -166,7 +166,7 @@ class KandidatController extends Controller
                 ->first();
             
             if ($existingKandidat) {
-                return redirect()->back()->with('error', 'Nomor urut sudah digunakan untuk kegiatan ini.');
+                return redirect()->back()->withErrors(['no_urut' => 'Nomor urut sudah digunakan untuk kegiatan ini.']);
             }
 
             // Handle foto upload

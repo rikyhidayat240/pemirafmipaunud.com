@@ -44,22 +44,24 @@ watch(() => page.props.alert, (newFlash) => {
         }" />
 
         <!-- Star background overlay using Figma Assets -->
-        <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-            <!-- Gold constellation (Group 186) -->
-            <img src="/Group 186.png" class="absolute top-[15%] left-[3%] w-[20vw] max-w-[150px] min-w-[80px] opacity-60 animate-pulse" style="animation-duration: 4s;" alt="">
+        <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden flex justify-center">
+            <div class="relative w-full h-full max-w-[1920px]">
+                <!-- Gold constellation (Group 186) -->
+                <img src="/Group 186.png" class="absolute top-[15%] left-[3%] w-[20vw] max-w-[150px] min-w-[80px] opacity-60 animate-pulse" style="animation-duration: 4s;" alt="">
 
-            <!-- Big 4-pointed star (Group 220) -->
-            <img src="/Group 220.png" class="absolute top-[10%] right-[10%] w-[12vw] max-w-[100px] min-w-[50px] opacity-50" style="animation: float-star 8s ease-in-out infinite;" alt="">
-            <img src="/Group 220.png" class="absolute bottom-[30%] left-[8%] w-[8vw] max-w-[80px] min-w-[40px] opacity-40" style="animation: float-star 6s ease-in-out infinite 2s; transform: scaleX(-1);" alt="">
+                <!-- Big 4-pointed star (Group 220) -->
+                <img src="/Group 220.png" class="absolute top-[10%] right-[10%] w-[12vw] max-w-[100px] min-w-[50px] opacity-50" style="animation: float-star 8s ease-in-out infinite;" alt="">
+                <img src="/Group 220.png" class="absolute bottom-[30%] left-[8%] w-[8vw] max-w-[80px] min-w-[40px] opacity-40" style="animation: float-star 6s ease-in-out infinite 2s; transform: scaleX(-1);" alt="">
 
-            <!-- Static decorative stars -->
-            <div class="absolute top-[8%] left-[12%] size-1 rounded-full bg-yellow-400/40" style="animation: twinkle 3s ease-in-out infinite;"></div>
-            <div class="absolute top-[15%] left-[25%] size-0.5 rounded-full bg-white/30" style="animation: twinkle 4s ease-in-out infinite 0.5s;"></div>
-            <div class="absolute top-[22%] left-[45%] size-1 rounded-full bg-white/20" style="animation: twinkle 5s ease-in-out infinite 1s;"></div>
-            <div class="absolute top-[30%] right-[15%] size-0.5 rounded-full bg-white/25" style="animation: twinkle 4.5s ease-in-out infinite 1.2s;"></div>
-            <div class="absolute top-[55%] right-[8%] size-1 rounded-full bg-white/15" style="animation: twinkle 5.5s ease-in-out infinite 0.6s;"></div>
-            <div class="absolute top-[85%] left-[35%] size-0.5 rounded-full bg-yellow-400/15" style="animation: twinkle 5.8s ease-in-out infinite 1.8s;"></div>
-            <div class="absolute top-[90%] right-[10%] size-1 rounded-full bg-white/20" style="animation: twinkle 4.8s ease-in-out infinite 0.4s;"></div>
+                <!-- Static decorative stars -->
+                <div class="absolute top-[8%] left-[12%] size-1 rounded-full bg-yellow-400/40" style="animation: twinkle 3s ease-in-out infinite;"></div>
+                <div class="absolute top-[15%] left-[25%] size-0.5 rounded-full bg-white/30" style="animation: twinkle 4s ease-in-out infinite 0.5s;"></div>
+                <div class="absolute top-[22%] left-[45%] size-1 rounded-full bg-white/20" style="animation: twinkle 5s ease-in-out infinite 1s;"></div>
+                <div class="absolute top-[30%] right-[15%] size-0.5 rounded-full bg-white/25" style="animation: twinkle 4.5s ease-in-out infinite 1.2s;"></div>
+                <div class="absolute top-[55%] right-[8%] size-1 rounded-full bg-white/15" style="animation: twinkle 5.5s ease-in-out infinite 0.6s;"></div>
+                <div class="absolute top-[85%] left-[35%] size-0.5 rounded-full bg-yellow-400/15" style="animation: twinkle 5.8s ease-in-out infinite 1.8s;"></div>
+                <div class="absolute top-[90%] right-[10%] size-1 rounded-full bg-white/20" style="animation: twinkle 4.8s ease-in-out infinite 0.4s;"></div>
+            </div>
         </div>
 
         <div class="relative z-10 flex min-h-screen flex-col">
@@ -89,7 +91,7 @@ watch(() => page.props.alert, (newFlash) => {
                 </DialogHeader>
 
                 <DialogFooter>
-                    <Button variant="outline" @click="() => alert = null" class="border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10">Keluar</Button>
+                    <Button variant="outline" @click="() => alert = null" class="border-yellow-400/30 text-yellow-400 hover:bg-transparent dark:hover:bg-transparent hover:underline bg-transparent">Keluar</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

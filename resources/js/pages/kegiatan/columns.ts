@@ -167,12 +167,10 @@ export const columns: ColumnDef<Kegiatan>[] = [
         },
         cell: ({ row }) => {
             const jumlahPemilih = row.original.jumlah_pemilih || 0;
-            const totalMahasiswa = row.original.total_mahasiswa || 0;
-            const percentage = totalMahasiswa > 0 ? ((jumlahPemilih / totalMahasiswa) * 100).toFixed(1) : '0.0';
 
             return h('div', { class: 'text-center' }, [
-                h('div', { class: 'font-semibold' }, `${jumlahPemilih} / ${totalMahasiswa}`),
-                h('div', { class: 'text-xs text-muted-foreground' }, `${percentage}%`)
+                h('div', { class: 'font-semibold text-lg' }, `${jumlahPemilih}`),
+                h('div', { class: 'text-xs text-muted-foreground' }, `Suara Masuk`)
             ]);
         },
     },

@@ -16,12 +16,12 @@ const title = 'Pemilihan';
 
 // Define props
 const props = defineProps<{
-    kegiatanBem: Kegiatan & { kandidat: Kandidat[] };
-    kegiatanHima: Kegiatan & { kandidat: Kandidat[] };
+    kegiatanBem: Kegiatan & { kandidat: Kandidat[] } | null;
+    kegiatanHima: Kegiatan & { kandidat: Kandidat[] } | null;
 }>();
 
 // Voting state
-const currentStep = ref<'bem' | 'hima' | 'complete'>('bem');
+const currentStep = ref<'bem' | 'hima' | 'complete'>(props.kegiatanBem ? 'bem' : (props.kegiatanHima ? 'hima' : 'complete'));
 const selectedBem = ref<number | null>(null);
 const selectedHima = ref<number | null>(null);
 const isVoting = ref(true);
@@ -94,7 +94,7 @@ const confirmVote = () => {
     if (pendingSelection.value.type === 'bem') {
         selectedBem.value = pendingSelection.value.id;
         setTimeout(() => {
-            currentStep.value = 'hima';
+            currentStep.value = props.kegiatanHima ? 'hima' : 'complete';
         }, 200);
     } else {
         selectedHima.value = pendingSelection.value.id;
@@ -116,7 +116,7 @@ const cancelVote = () => {
 
 // Submit final vote
 const submitVote = () => {
-    if (!selectedBem.value || !selectedHima.value || !signature.value) return;
+    if ((props.kegiatanBem && !selectedBem.value) || (props.kegiatanHima && !selectedHima.value) || !signature.value) return;
 
     if (!hasSignature.value) {
         alert('Mohon tanda tangani terlebih dahulu!');
@@ -183,7 +183,7 @@ const currentKegiatan = computed(() => {
 const pendingKandidat = computed(() => {
     if (!pendingSelection.value) return null;
     const kegiatan = pendingSelection.value.type === 'bem' ? props.kegiatanBem : props.kegiatanHima;
-    return kegiatan.kandidat.find(k => k.id === pendingSelection.value!.id);
+    return kegiatan?.kandidat.find(k => k.id === pendingSelection.value!.id);
 });
 
 const handleProgramStudi = (id_program_studi: number) => {
@@ -252,7 +252,7 @@ const programStudiName = computed(() => {
                                 style="background: linear-gradient(180deg, #c9a227, #8b6914);">
                                 <span class="text-white text-xs font-black uppercase tracking-wider poppins-font"
                                     style="writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.2em;">
-                                    {{ currentStep === 'bem' ? 'CAKA BEM' : 'CAKA JMK' }}
+                                    {{ currentStep === 'bem' ? 'CAKA BEM' : 'CAKA HIMA' }}
                                 </span>
                             </div>
 
@@ -333,8 +333,8 @@ const programStudiName = computed(() => {
                     <!-- Selections grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- BEM Selection -->
-                        <div class="rounded-xl p-4 border border-yellow-400/20" style="background: rgba(201,162,39,0.05);">
-                            <p class="text-xs text-yellow-400/60 uppercase tracking-widest font-semibold mb-3">Pilihan Caka JMK Gen 1</p>
+                        <div v-if="kegiatanBem" class="rounded-xl p-4 border border-yellow-400/20" style="background: rgba(201,162,39,0.05);">
+                            <p class="text-xs text-yellow-400/60 uppercase tracking-widest font-semibold mb-3">Pilihan Caka BEM</p>
                             <div v-if="selectedBem">
                                 <p class="text-sm text-white/50">Nomor Urut {{ kegiatanBem.kandidat.find(k => k.id === selectedBem)?.no_urut }}</p>
                                 <p v-if="kegiatanBem.kandidat.find(k => k.id === selectedBem)?.mahasiswa.find(m => m.pivot.jabatan === 'ketua')?.nama.includes('Kotak Kosong')"
@@ -352,8 +352,8 @@ const programStudiName = computed(() => {
                         </div>
 
                         <!-- HIMA Selection -->
-                        <div class="rounded-xl p-4 border border-yellow-400/20" style="background: rgba(201,162,39,0.05);">
-                            <p class="text-xs text-yellow-400/60 uppercase tracking-widest font-semibold mb-3">Pilihan Caka JMK Gen 2</p>
+                        <div v-if="kegiatanHima" class="rounded-xl p-4 border border-yellow-400/20" style="background: rgba(201,162,39,0.05);">
+                            <p class="text-xs text-yellow-400/60 uppercase tracking-widest font-semibold mb-3">Pilihan Caka HIMA</p>
                             <div v-if="selectedHima">
                                 <p class="text-sm text-white/50">Nomor Urut {{ kegiatanHima.kandidat.find(k => k.id === selectedHima)?.no_urut }}</p>
                                 <p v-if="kegiatanHima.kandidat.find(k => k.id === selectedHima)?.mahasiswa.find(m => m.pivot.jabatan === 'ketua')?.nama.includes('Kotak Kosong')"

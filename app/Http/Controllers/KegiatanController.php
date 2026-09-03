@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kegiatan;
 use App\Models\ProgramStudi;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,13 +21,16 @@ class KegiatanController extends Controller
         // Fetch kegiatan data with related program studi and count mahasiswa yang sudah vote
         $kegiatan = Kegiatan::with('programStudi')
             ->withCount([
-                'mahasiswa as total_mahasiswa',
+                'mahasiswa as total_mahasiswa' => function ($query) {
+                    $query->where('has_vote', true);
+                },
                 'mahasiswa as jumlah_pemilih' => function ($query) {
                     $query->where('has_vote', true);
                 }
             ])
             ->where('tahun', now()->year)
             ->get();
+            
         $programStudi = ProgramStudi::all();
         return Inertia::render('kegiatan/Index', [
             'kegiatan' => $kegiatan,
@@ -100,10 +104,10 @@ class KegiatanController extends Controller
                 'foto' => $fotoPath,
             ]);
 
-            // Redirect with success message
-            return redirect()->back()->with('success', 'Data kegiatan berhasil dibuat.');
+            // Redirect back with success message
+            return back()->with('success', 'Data kegiatan berhasil dibuat.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat data kegiatan: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat membuat data kegiatan: ' . $e->getMessage());
         }
     }
 
@@ -114,8 +118,15 @@ class KegiatanController extends Controller
     {
         // Find the kegiatan by ID
         $kegiatan = Kegiatan::with(['kandidat.mahasiswa', 'programStudi'])
-            ->withCount(['mahasiswa as total_mahasiswa'])
             ->findOrFail($id);
+
+        $totalSuara = DB::table('surat_suara')
+            ->where('id_kegiatan', $kegiatan->id)
+            ->where('has_vote', 1)
+            ->count(DB::raw('DISTINCT nim'));
+            
+        $totalSuaraDiv = $totalSuara > 0 ? $totalSuara : 1;
+        $kegiatan->total_mahasiswa = $totalSuara;
 
         if ($kegiatan->ruang_lingkup === 'fakultas') {
             // Get votes by program studi for fakultas level
@@ -123,15 +134,15 @@ class KegiatanController extends Controller
                 ->leftJoin('mahasiswa', 'program_studi.id', '=', 'mahasiswa.id_program_studi')
                 ->leftJoin('surat_suara', function ($join) use ($kegiatan) {
                     $join->on('mahasiswa.nim', '=', 'surat_suara.nim')
-                        ->where('surat_suara.id_kegiatan', '=', $kegiatan->id);
+                        ->where('surat_suara.id_kegiatan', '=', $kegiatan->id)
+                        ->where('surat_suara.has_vote', '=', 1);
                 })
-                ->where('mahasiswa.is_admin', '!=', 1)
                 ->select(
                     'program_studi.id as id_program_studi',
                     'program_studi.nama as nama_prodi',
-                    DB::raw('COUNT(DISTINCT mahasiswa.nim) as total_mahasiswa'),
-                    DB::raw('COUNT(DISTINCT CASE WHEN surat_suara.has_vote = 1 THEN surat_suara.nim END) as jumlah_pemilih'),
-                    DB::raw('ROUND((COUNT(DISTINCT CASE WHEN surat_suara.has_vote = 1 THEN surat_suara.nim END) / COUNT(DISTINCT mahasiswa.nim)) * 100, 2) as persentase')
+                    DB::raw('COUNT(DISTINCT surat_suara.nim) as total_mahasiswa'),
+                    DB::raw('COUNT(DISTINCT surat_suara.nim) as jumlah_pemilih'),
+                    DB::raw("ROUND((COUNT(DISTINCT surat_suara.nim) / {$totalSuaraDiv}) * 100, 2) as persentase")
                 )
                 ->groupBy('program_studi.id', 'program_studi.nama')
                 ->get();
@@ -145,15 +156,16 @@ class KegiatanController extends Controller
             $votesByAngkatan = DB::table('mahasiswa')
                 ->leftJoin('surat_suara', function ($join) use ($kegiatan) {
                     $join->on('mahasiswa.nim', '=', 'surat_suara.nim')
-                        ->where('surat_suara.id_kegiatan', '=', $kegiatan->id);
+                        ->where('surat_suara.id_kegiatan', '=', $kegiatan->id)
+                        ->where('surat_suara.has_vote', '=', 1);
                 })
                 ->where('mahasiswa.id_program_studi', '=', $kegiatan->id_program_studi)
                 ->where('mahasiswa.is_admin', '!=', 1)
                 ->select(
                     'mahasiswa.angkatan',
-                    DB::raw('COUNT(DISTINCT mahasiswa.nim) as total_mahasiswa'),
-                    DB::raw('COUNT(DISTINCT CASE WHEN surat_suara.has_vote = 1 THEN surat_suara.nim END) as jumlah_pemilih'),
-                    DB::raw('ROUND((COUNT(DISTINCT CASE WHEN surat_suara.has_vote = 1 THEN surat_suara.nim END) / COUNT(DISTINCT mahasiswa.nim)) * 100, 2) as persentase')
+                    DB::raw('COUNT(DISTINCT surat_suara.nim) as total_mahasiswa'),
+                    DB::raw('COUNT(DISTINCT surat_suara.nim) as jumlah_pemilih'),
+                    DB::raw("ROUND((COUNT(DISTINCT surat_suara.nim) / {$totalSuaraDiv}) * 100, 2) as persentase")
                 )
                 ->groupBy('mahasiswa.angkatan')
                 ->orderBy('mahasiswa.angkatan', 'desc')

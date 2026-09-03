@@ -213,15 +213,13 @@ const terms = [
                         <AlertDialogFooter class="sm:justify-center">
                             <div class="grid w-full grid-cols-2 gap-3">
                                 <AlertDialogCancel :disabled="isMoved"
-                                    class="m-0 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10 bg-transparent">
+                                    class="m-0 border border-yellow-400/30 text-yellow-400 hover:bg-transparent dark:hover:bg-transparent hover:underline bg-transparent">
                                     Batal
                                 </AlertDialogCancel>
-                                <button as-child :disabled="isMoved" @click="isMoved = true" class="btn-gold py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-                                    <Link :href="route('vote.show')" class="flex items-center gap-2 w-full justify-center">
+                                    <Link :href="route('vote.show')" @click="isMoved = true" :class="['btn-gold py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2', isMoved ? 'opacity-70 pointer-events-none' : '']">
                                         <LoaderCircle v-if="isMoved" class="size-4 animate-spin" />
                                         Lanjutkan
                                     </Link>
-                                </button>
                             </div>
                         </AlertDialogFooter>
                     </AlertDialogContent>
