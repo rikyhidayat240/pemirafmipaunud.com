@@ -271,13 +271,13 @@ const submit = () => {
                         <!-- Suggestions Dropdown -->
                         <div 
                             v-if="showKetuaSuggestions && filteredKetuaSuggestions.length > 0 && mode !== 'view'"
-                            class="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
+                            class="absolute top-full left-0 right-0 mt-1 bg-[#0a0d22] border border-white/10 rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
                         >
                             <div
                                 v-for="m in filteredKetuaSuggestions"
                                 :key="m.nim"
                                 @click="selectKetua(m)"
-                                class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                class="px-3 py-2 hover:bg-white/10 cursor-pointer text-sm text-white"
                             >
                                 {{ m.nama }} ({{ m.nim }})
                             </div>
@@ -309,13 +309,13 @@ const submit = () => {
                         <!-- Suggestions Dropdown -->
                         <div 
                             v-if="showWakilSuggestions && filteredWakilSuggestions.length > 0 && mode !== 'view'"
-                            class="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
+                            class="absolute top-full left-0 right-0 mt-1 bg-[#0a0d22] border border-white/10 rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
                         >
                             <div
                                 v-for="m in filteredWakilSuggestions"
                                 :key="m.nim"
                                 @click="selectWakil(m)"
-                                class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                class="px-3 py-2 hover:bg-white/10 cursor-pointer text-sm text-white"
                             >
                                 {{ m.nama }} ({{ m.nim }})
                             </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { cn } from '@/lib/utils';
 import { useForm } from '@inertiajs/vue3';
 import { ProgramStudi, Kegiatan } from '@/types';
@@ -63,19 +63,23 @@ const waktuSelesaiParsed = parseDatetime(props.kegiatanData?.waktu_selesai);
 const waktuSelesaiDate = ref(waktuSelesaiParsed.date);
 const waktuSelesaiTime = ref(waktuSelesaiParsed.time);
 
-// Update waktu_mulai when date or time changes
-const updateWaktuMulai = () => {
-    if (waktuMulaiDate.value && waktuMulaiTime.value) {
-        form.waktu_mulai = `${waktuMulaiDate.value} ${waktuMulaiTime.value}:00`;
+// Watch waktu_mulai when date or time changes
+watch([waktuMulaiDate, waktuMulaiTime], ([newDate, newTime]) => {
+    if (newDate && newTime) {
+        form.waktu_mulai = `${newDate} ${newTime}:00`;
+    } else {
+        form.waktu_mulai = '';
     }
-};
+});
 
-// Update waktu_selesai when date or time changes
-const updateWaktuSelesai = () => {
-    if (waktuSelesaiDate.value && waktuSelesaiTime.value) {
-        form.waktu_selesai = `${waktuSelesaiDate.value} ${waktuSelesaiTime.value}:00`;
+// Watch waktu_selesai when date or time changes
+watch([waktuSelesaiDate, waktuSelesaiTime], ([newDate, newTime]) => {
+    if (newDate && newTime) {
+        form.waktu_selesai = `${newDate} ${newTime}:00`;
+    } else {
+        form.waktu_selesai = '';
     }
-};
+});
 
 // Foto preview state
 const fotoPreview = ref<string | null>(null);
@@ -216,10 +220,10 @@ const submit = () => {
                         </Label>
                         <div class="grid grid-cols-2 gap-2">
                             <Input id="waktu_mulai_date" type="date" :tabindex="5" v-model="waktuMulaiDate"
-                                @input="updateWaktuMulai" :required="mode !== 'view'"
+                                :required="mode !== 'view'"
                                 :disabled="form.processing || mode === 'view'" :readonly="mode === 'view'" />
                             <Input id="waktu_mulai_time" type="time" :tabindex="6" v-model="waktuMulaiTime"
-                                @input="updateWaktuMulai" :required="mode !== 'view'"
+                                :required="mode !== 'view'"
                                 :disabled="form.processing || mode === 'view'" :readonly="mode === 'view'" />
                         </div>
                         <InputError :message="form.errors.waktu_mulai" />
@@ -233,10 +237,10 @@ const submit = () => {
                         </Label>
                         <div class="grid grid-cols-2 gap-2">
                             <Input id="waktu_selesai_date" type="date" :tabindex="7" v-model="waktuSelesaiDate"
-                                @input="updateWaktuSelesai" :required="mode !== 'view'"
+                                :required="mode !== 'view'"
                                 :disabled="form.processing || mode === 'view'" :readonly="mode === 'view'" />
                             <Input id="waktu_selesai_time" type="time" :tabindex="8" v-model="waktuSelesaiTime"
-                                @input="updateWaktuSelesai" :required="mode !== 'view'"
+                                :required="mode !== 'view'"
                                 :disabled="form.processing || mode === 'view'" :readonly="mode === 'view'" />
                         </div>
                         <InputError :message="form.errors.waktu_selesai" />
