@@ -45,14 +45,10 @@ watch(() => page.props.alert, (newFlash) => {
 
         <!-- Star background overlay using Figma Assets -->
         <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden flex justify-center">
+            <!-- Full page Starfield background -->
+            <div class="absolute inset-0 z-[-1]" style="background-image: url('/StarfieldCanvas.png'); background-size: cover; background-position: center; background-attachment: fixed;"></div>
+            
             <div class="relative w-full h-full max-w-[1920px]">
-                <!-- Gold constellation (Group 186) -->
-                <img src="/Group 186.png" class="absolute top-[15%] left-[3%] w-[20vw] max-w-[150px] min-w-[80px] opacity-60 animate-pulse" style="animation-duration: 4s;" alt="">
-
-                <!-- Big 4-pointed star (Group 220) -->
-                <img src="/Group 220.png" class="absolute top-[10%] right-[10%] w-[12vw] max-w-[100px] min-w-[50px] opacity-50" style="animation: float-star 8s ease-in-out infinite;" alt="">
-                <img src="/Group 220.png" class="absolute bottom-[30%] left-[8%] w-[8vw] max-w-[80px] min-w-[40px] opacity-40" style="animation: float-star 6s ease-in-out infinite 2s; transform: scaleX(-1);" alt="">
-
                 <!-- Static decorative stars -->
                 <div class="absolute top-[8%] left-[12%] size-1 rounded-full bg-yellow-400/40" style="animation: twinkle 3s ease-in-out infinite;"></div>
                 <div class="absolute top-[15%] left-[25%] size-0.5 rounded-full bg-white/30" style="animation: twinkle 4s ease-in-out infinite 0.5s;"></div>

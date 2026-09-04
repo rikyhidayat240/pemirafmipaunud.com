@@ -4,15 +4,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
-        <style>
-            html, html.dark {
-                background-color: #111635;
-            }
-        </style>
-
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
-
+        
         <link rel="icon" href="/Logo pemira.png?v=2" sizes="any">
         <link rel="icon" href="/Logo pemira.png?v=2" type="image/png">
         <link rel="apple-touch-icon" href="/Logo pemira.png?v=2">
@@ -25,7 +18,7 @@
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased min-w-[320px] overflow-x-hidden">
+    <body class="font-sans antialiased min-w-[320px] overflow-x-hidden" style="background-color: #111635; background-image: url('/StarfieldCanvas.png'); background-size: cover; background-position: center; background-attachment: fixed;">
         @inertia
     </body>
 </html>

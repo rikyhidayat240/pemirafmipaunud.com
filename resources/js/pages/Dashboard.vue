@@ -139,6 +139,20 @@ const breadcrumbs: BreadcrumbItem[] = [
             <!-- ===== HERO SECTION ===== -->
             <div class="relative min-h-[88vh] flex flex-col items-center justify-center overflow-hidden px-4">
 
+                <!-- Constellation Backgrounds for Hero Section -->
+                <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center">
+                    <div class="relative w-full h-full max-w-[1920px]">
+                        <!-- Large Constellation (Group 186) -->
+                        <img src="/group-186.png" class="absolute top-[5%] left-[2%] w-[25vw] max-w-[300px] min-w-[150px] opacity-80 animate-pulse" style="animation-duration: 6s;" alt="">
+                        
+                        <!-- Kite constellation (Group 220) -->
+                        <img src="/group-220.png" class="absolute top-[5%] right-[5%] w-[18vw] max-w-[200px] min-w-[100px] opacity-80 animate-pulse" style="animation-duration: 8s;" alt="">
+                        
+                        <!-- Huge 4-Pointed Star (Group 227) -->
+                        <img src="/group-227.png" class="absolute bottom-[5%] right-[2%] w-[20vw] max-w-[250px] min-w-[120px] opacity-70 animate-pulse" style="animation-duration: 6s;" alt="">
+                    </div>
+                </div>
+
                 <!-- Center content -->
                 <div class="relative z-10 flex flex-col items-center justify-center gap-6 text-center max-w-2xl">
                     <!-- Logo glowing -->
@@ -150,8 +164,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
 
                     <!-- Decorative 4-pointed stars -->
-                    <div class="star-4 absolute -top-2 left-[20%] size-4 bg-yellow-400/30" style="animation: float-star 5s ease-in-out infinite;"></div>
-                    <div class="star-4 absolute top-8 right-[18%] size-3 bg-yellow-400/20" style="animation: float-star 7s ease-in-out infinite 1s;"></div>
+                    <div class="star-4 absolute -top-2 left-[20%] size-4 bg-yellow-400/30 animate-pulse" style="animation-duration: 5s;"></div>
+                    <div class="star-4 absolute top-8 right-[18%] size-3 bg-yellow-400/20 animate-pulse" style="animation-duration: 7s;"></div>
 
                     <!-- Heading -->
                     <div class="space-y-2">

@@ -134,11 +134,7 @@ const mainNavItems: NavItem[] = [
 
             <!-- Right: NIM badge + User menu -->
             <div class="flex items-center gap-3">
-                <!-- NIM Badge (logged in users) -->
-                <div v-if="auth.user" class="hidden sm:flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-3 py-1">
-                    <div class="size-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
-                    <span class="text-xs font-semibold text-yellow-400">NIM: {{ auth.user.nim }}</span>
-                </div>
+
 
                 <!-- User Dropdown -->
                 <DropdownMenu v-if="auth.user">

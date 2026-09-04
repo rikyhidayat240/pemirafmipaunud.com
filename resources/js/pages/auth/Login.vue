@@ -108,14 +108,14 @@ const submit = () => {
 
             <!-- Bottom Links -->
             <div class="flex flex-col items-center gap-2 text-center">
-                <TextLink :href="route('dashboard')" :tabindex="5" class="text-sm text-white/40 hover:text-white/70 transition-colors">
+                <TextLink :href="route('home')" :tabindex="5" class="text-sm text-white/40 hover:text-white/70 transition-colors">
                     Kembali
                 </TextLink>
                 <span class="text-xs text-white/20">·</span>
                 <div class="text-xs text-white/30">
                     Belum punya akun?
                     <TextLink :href="route('register')" :tabindex="6" class="text-yellow-400/60 hover:text-yellow-400 transition-colors">
-                        Jangan Daftar Mulu
+                        Daftar
                     </TextLink>
                 </div>
             </div>
