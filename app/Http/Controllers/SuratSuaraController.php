@@ -122,25 +122,44 @@ class SuratSuaraController extends Controller
                 ->exists() : false;
 
             if ($alreadyVotedBem || $alreadyVotedHima) {
-                // If they already voted, abort the transaction and do NOT increment votes
+                // SECURITY: Log double-vote attempt
+                Log::warning('[SECURITY] Double-vote attempt detected in Pemira', [
+                    'nim'               => $user->nim,
+                    'already_voted_bem' => $alreadyVotedBem,
+                    'already_voted_hima'=> $alreadyVotedHima,
+                    'ip'                => $request->ip(),
+                    'user_agent'        => $request->userAgent(),
+                ]);
                 return redirect()->route('dashboard')
                     ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda sudah memberikan suara! Suara ganda ditolak.']);
             }
 
-            // Process and save signature image
             $ttdPath = null;
             if ($request->ttd) {
                 $image = $request->ttd;
+                // SECURITY: Strict whitelist of allowed image types for TTD
+                $allowedTypes = ['png', 'jpeg', 'jpg'];
                 if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
                     $image = substr($image, strpos($image, ',') + 1);
-                    $type = strtolower($type[1]);
+                    $detectedType = strtolower($type[1]);
+
+                    // SECURITY: Reject if type not in whitelist
+                    if (!in_array($detectedType, $allowedTypes, true)) {
+                        Log::warning('[SECURITY] Rejected invalid TTD image type', [
+                            'nim'  => $user->nim,
+                            'type' => $detectedType,
+                            'ip'   => $request->ip(),
+                        ]);
+                        return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Format tanda tangan tidak valid.']);
+                    }
                     
                     $image = base64_decode($image);
                     if ($image === false) {
                         return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Gagal memproses tanda tangan.']);
                     }
                     
-                    $filename = $user->nim . '_' . time() . '_' . Str::random(10) . '.' . $type;
+                    // SECURITY: Use random filename — never trust client-supplied data for filename
+                    $filename = $user->nim . '_' . time() . '_' . Str::random(16) . '.' . $detectedType;
                     Storage::disk('public')->put('ttd-mahasiswa/' . $filename, $image);
                     $ttdPath = 'ttd-mahasiswa/' . $filename;
                 }
