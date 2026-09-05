@@ -5,6 +5,7 @@ import { type BreadcrumbItem, Kegiatan } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import StarButton from '@/components/StarButton.vue';
 
 // define props
 const props = defineProps<{
@@ -156,7 +157,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <!-- Center content -->
                 <div class="relative z-10 flex flex-col items-center justify-center gap-6 text-center max-w-2xl">
                     <!-- Logo glowing -->
-                    <div class="relative">
+                    <div class="relative animate-float-logo">
                         <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, rgba(201,162,39,0.3) 0%, transparent 70%); transform: scale(2.5); animation: shimmer-gold 3s ease-in-out infinite;"></div>
                         <img src="/Logo pemira.png" alt="Logo PEMIRA"
                             class="relative size-24 sm:size-28 lg:size-32 drop-shadow-2xl object-contain"
@@ -209,11 +210,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
 
-                    <!-- CTA Button -->
+                    <!-- CTA Button with Star Animation -->
                     <Link :href="ctaLink">
-                        <button class="btn-gold px-8 py-3 rounded-full text-sm font-bold tracking-wide shadow-lg" style="box-shadow: 0 0 30px rgba(201,162,39,0.4);">
+                        <StarButton class="px-8 py-3.5 text-sm font-bold tracking-wide shadow-lg">
                             Masuk ke Bilik Suara ➜
-                        </button>
+                        </StarButton>
                     </Link>
 
                     <!-- Sub tagline -->
@@ -229,9 +230,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <h2 class="text-xl md:text-2xl font-bold text-center text-white mb-8">
                         <span class="text-yellow-400">Kegiatan</span> Yang Anda Dapat Ikuti
                     </h2>
-                    <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+                    <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto tilt-3d-container">
                         <div v-for="item in filteredKegiatan" :key="item.id"
-                            class="pemira-card rounded-xl overflow-hidden hover:border-yellow-400/40 transition-all duration-300">
+                            class="pemira-card tilt-3d-card rounded-xl overflow-hidden hover:border-yellow-400/40 transition-all duration-500">
                             <div class="relative">
                                 <img :src="`/storage/${item.foto}`" alt="" class="w-full h-44 object-cover" />
                                 <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(14,18,55,0.8) 0%, transparent 60%);"></div>

@@ -28,7 +28,7 @@ const auth = computed(() => page.props.auth);
 const isCurrentRoute = computed(() => (url: string) => page.url === url);
 
 const activeItemStyles = computed(
-    () => (url: string) => (isCurrentRoute.value(url) ? 'text-yellow-400 dark:bg-white/5' : ''),
+    () => (url: string) => (isCurrentRoute.value(url) ? 'text-white font-bold' : 'text-white/60 hover:text-white'),
 );
 
 const mainNavItems: NavItem[] = [
@@ -102,27 +102,32 @@ const mainNavItems: NavItem[] = [
             </div>
 
             <!-- Logo Left -->
-            <Link :href="route('dashboard')" class="flex items-center gap-x-2.5 flex-shrink-0">
-                <img src="/Logo pemira.png" alt="Logo PEMIRA" class="size-10 object-contain" onerror="this.style.display='none'" />
-                <div class="hidden sm:block leading-tight">
-                    <p class="text-[10px] text-yellow-400/60 font-medium uppercase tracking-widest leading-none">Pemilihan Umum Raya</p>
-                    <p class="text-sm font-bold text-yellow-400 leading-tight">FMIPA {{ dayjs().year() }}</p>
+            <Link :href="route('dashboard')" class="flex items-center gap-x-3 flex-shrink-0">
+                <div class="relative flex items-center justify-center size-10 rounded-full bg-[#202336] border border-yellow-500/30 shadow-md">
+                    <img src="/Logo pemira.png" alt="Logo PEMIRA" class="size-7 object-contain" onerror="this.style.display='none'" />
+                </div>
+                <div class="hidden sm:block leading-tight border-l border-white/10 pl-3">
+                    <p class="text-[9px] text-yellow-400 font-bold uppercase tracking-widest leading-none">Pemilihan Umum Raya</p>
+                    <p class="text-base font-black text-white tracking-wider leading-tight poppins-font">FMIPA <span class="text-yellow-400">{{ dayjs().year() }}</span></p>
                 </div>
             </Link>
 
             <!-- Desktop Admin Nav -->
-            <div v-if="auth.user && (auth.user.is_admin === true || auth.user.is_admin === 1)" class="hidden h-full lg:flex lg:flex-1">
-                <NavigationMenu class="ml-6 flex h-full items-stretch">
-                    <NavigationMenuList class="flex h-full items-stretch space-x-1">
+            <div v-if="auth.user && (auth.user.is_admin === true || auth.user.is_admin === 1)" class="hidden h-full lg:flex lg:flex-1 justify-center">
+                <NavigationMenu class="flex h-full items-stretch">
+                    <NavigationMenuList class="flex h-full items-stretch space-x-2">
                         <NavigationMenuItem v-for="(item, index) in mainNavItems" :key="index"
                             class="relative flex h-full items-center">
                             <Link
-                                :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3 text-white/70 hover:text-yellow-400 hover:bg-white/5 bg-transparent']"
+                                :class="[
+                                    'h-full flex items-center px-4 text-xs font-semibold tracking-wide transition-colors bg-transparent',
+                                    isCurrentRoute(item.href) ? 'text-white font-bold' : 'text-white/60 hover:text-white'
+                                ]"
                                 :href="item.href">
                             {{ item.title }}
                             </Link>
                             <div v-if="isCurrentRoute(item.href)"
-                                class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-yellow-400">
+                                class="absolute bottom-0 left-0 h-[3px] w-full bg-yellow-400 rounded-t-full shadow-[0_-2px_8px_rgba(240,192,64,0.8)]">
                             </div>
                         </NavigationMenuItem>
                     </NavigationMenuList>
@@ -134,22 +139,23 @@ const mainNavItems: NavItem[] = [
 
             <!-- Right: NIM badge + User menu -->
             <div class="flex items-center gap-3">
-
-
                 <!-- User Dropdown -->
                 <DropdownMenu v-if="auth.user">
                     <DropdownMenuTrigger :as-child="true">
-                        <Button variant="ghost" size="icon"
-                            class="relative size-10 w-auto rounded-full py-1 px-1 sm:px-2 hover:bg-white/5 focus-within:ring-2 focus-within:ring-yellow-400/50">
-                            <Avatar class="size-8 overflow-hidden rounded-full border border-yellow-400/30">
+                        <Button variant="ghost"
+                            class="relative flex items-center gap-3 h-auto py-1 px-2 rounded-full hover:bg-white/5 focus-within:ring-0 focus:ring-0">
+                            <Avatar class="size-9 border-2 border-yellow-500/50 shadow-md">
                                 <AvatarImage v-if="auth.user.avatar" :src="`/storage/${auth.user.avatar}`"
                                     :alt="auth.user.nama" />
                                 <AvatarFallback
-                                    class="rounded-lg bg-yellow-400/10 font-semibold text-yellow-400">
+                                    class="bg-[#3a3525] font-bold text-yellow-400 text-xs">
                                     {{ getInitials(auth.user?.nama) }}
                                 </AvatarFallback>
                             </Avatar>
-                            <span class="hidden sm:flex text-white/80 text-sm">{{ auth.user.nama }}</span>
+                            <div class="hidden sm:flex flex-col text-left leading-none">
+                                <span class="text-white text-xs font-bold">{{ auth.user.nama }}</span>
+                                <span class="text-[10px] text-yellow-400/80 font-semibold mt-0.5">{{ auth.user.is_admin ? 'Admin' : 'Pemilih' }}</span>
+                            </div>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" class="w-56 bg-[#1a1f4a] border-yellow-900/30">
@@ -160,10 +166,9 @@ const mainNavItems: NavItem[] = [
                 <!-- Guest buttons -->
                 <div v-else class="flex gap-2">
                     <Link :href="route('login')">
-                        <Button type="button" size="sm"
-                            class="btn-gold text-xs font-bold px-4 rounded-full">
+                        <button class="btn-gold !text-xs font-bold !px-5 !py-2">
                             ➜ Masuk Pemilih
-                        </Button>
+                        </button>
                     </Link>
                 </div>
             </div>

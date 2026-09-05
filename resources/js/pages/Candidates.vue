@@ -76,33 +76,33 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- ===== KANDIDAT CARDS ===== -->
-            <div class="max-w-3xl mx-auto w-full px-4 pb-12 space-y-6">
+            <div class="max-w-3xl mx-auto w-full px-4 pb-12 space-y-6 tilt-3d-container">
                 <h2 class="text-base font-bold text-center text-white/60 mb-6">
                     Kandidat <span class="text-yellow-400">{{ kegiatan.nama }}</span>
                 </h2>
 
                 <div v-for="(k, index) in kandidat" :key="k.id"
-                    class="pemira-card rounded-2xl overflow-hidden hover:border-yellow-400/30 transition-all duration-300">
+                    class="pemira-card tilt-3d-card rounded-2xl overflow-hidden hover:border-yellow-400/40 transition-all duration-500">
 
                     <div class="p-6">
                         <!-- Header row: photo + name + badges -->
                         <div class="flex items-start gap-4 mb-5">
                             <!-- Circular photo with number badge -->
-                            <div class="relative flex-shrink-0">
+                            <div class="relative flex-shrink-0 tilt-3d-child">
                                 <div class="size-20 sm:size-24 rounded-full overflow-hidden border-2 border-yellow-400/20">
                                     <img :src="k.foto !== null ? `/storage/${k.foto}` : '/images/blank-profile-picture.webp'"
                                         alt="Foto Kandidat"
                                         class="w-full h-full object-cover" />
                                 </div>
                                 <!-- Number badge -->
-                                <div class="absolute -top-1 -right-1 size-7 rounded-full flex items-center justify-center text-white font-black text-xs poppins-font"
+                                <div class="absolute -top-1 -right-1 size-7 rounded-full flex items-center justify-center text-white font-black text-xs poppins-font shadow-lg"
                                     style="background: linear-gradient(135deg, #c9a227, #f0c040);">
                                     {{ k.no_urut }}
                                 </div>
                             </div>
 
                             <!-- Name & tags -->
-                            <div class="flex-1 min-w-0 pt-1">
+                            <div class="flex-1 min-w-0 pt-1 tilt-3d-child">
                                 <h3 class="font-bold text-white text-base sm:text-lg leading-tight">
                                     <span v-for="(mhs, idx) in k.mahasiswa" :key="mhs.nim">
                                         {{ mhs.nama }}<span v-if="idx < k.mahasiswa.length - 1"> & </span>
@@ -165,7 +165,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </button>
                 </Link>
                 <Link :href="route('terms')" class="w-full">
-                    <button class="w-full py-3 rounded-full text-sm font-bold btn-gold">
+                    <button class="btn-gold w-full py-3 text-sm font-bold">
                         Ke Pemilihan ➜
                     </button>
                 </Link>

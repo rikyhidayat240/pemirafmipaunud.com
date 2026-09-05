@@ -194,8 +194,7 @@ const terms = [
 
                 <AlertDialog>
                     <AlertDialogTrigger as-child>
-                        <button :disabled="isMoved"
-                            class="w-full py-3 rounded-full text-sm font-bold btn-gold">
+                        <button :disabled="isMoved" class="btn-gold w-full py-3 text-sm font-bold">
                             Mulai Pemilihan ➜
                         </button>
                     </AlertDialogTrigger>

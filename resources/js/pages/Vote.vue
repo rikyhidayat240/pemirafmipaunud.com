@@ -239,12 +239,12 @@ const programStudiName = computed(() => {
 
             <!-- ===== VOTING SECTION (BEM and HIMA) ===== -->
             <div v-if="currentStep !== 'complete'" class="max-w-4xl mx-auto w-full px-4 pb-12">
-                <div class="flex flex-col md:flex-row gap-6 justify-center items-stretch">
+                <div class="flex flex-col md:flex-row gap-6 justify-center items-stretch tilt-3d-container">
                     <div v-for="kandidat in currentKegiatan.kandidat" :key="kandidat.id"
                         class="flex-1 max-w-sm mx-auto w-full">
 
                         <!-- Candidate Card -->
-                        <div class="vote-card rounded-2xl overflow-hidden relative"
+                        <div class="vote-card tilt-3d-card rounded-2xl overflow-hidden relative"
                             :class="(currentStep === 'bem' && selectedBem === kandidat.id) || (currentStep === 'hima' && selectedHima === kandidat.id) ? 'selected' : ''">
 
                             <!-- Vertical label -->
@@ -416,7 +416,7 @@ const programStudiName = computed(() => {
                     <button
                         @click="submitVote"
                         :disabled="isSubmitting || !hasSignature"
-                        class="w-full py-3 rounded-xl text-sm font-bold btn-gold flex items-center justify-center gap-2 disabled:opacity-50">
+                        class="btn-gold w-full py-3.5 text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
                         <LoaderCircle v-if="isSubmitting" class="size-4 animate-spin" />
                         Kirim Pilihan
                     </button>

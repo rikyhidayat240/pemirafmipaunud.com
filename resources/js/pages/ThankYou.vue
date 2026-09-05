@@ -46,8 +46,7 @@ import dayjs from 'dayjs';
 
                 <!-- CTA -->
                 <Link :href="route('dashboard')">
-                    <button class="btn-gold px-8 py-3 rounded-full text-sm font-bold tracking-wide"
-                        style="box-shadow: 0 0 30px rgba(201,162,39,0.4);">
+                    <button class="btn-gold px-8 py-3.5 text-sm font-bold tracking-wide">
                         ➜ Kembali ke Dashboard
                     </button>
                 </Link>
