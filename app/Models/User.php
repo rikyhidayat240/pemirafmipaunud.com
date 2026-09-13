@@ -37,6 +37,7 @@ class User extends Authenticatable
         'status',
         'is_admin',
         'email_verified_at',
+        'credentials_sent_at',
     ];
 
     /**
@@ -57,8 +58,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'    => 'datetime',
+            'credentials_sent_at'  => 'datetime',
+            'password'             => 'hashed',
         ];
     }
 

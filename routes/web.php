@@ -27,6 +27,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
         Route::post('users/sync-data/{year}', [MahasiswaController::class, 'syncMahasiswa'])
             ->name('users.sync-data');
+
+        Route::post('users/{nim}/send-credentials', [MahasiswaController::class, 'sendCredentials'])
+            ->name('users.send-credentials');
+
     
         Route::resource('events', KegiatanController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);

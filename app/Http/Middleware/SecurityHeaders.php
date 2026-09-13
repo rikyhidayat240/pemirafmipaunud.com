@@ -30,6 +30,10 @@ class SecurityHeaders
         // Restrict browser features
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
+        // HSTS: Force browsers to always use HTTPS for the next year (even if user types http://)
+        // includeSubDomains ensures all subdomains are also protected
+        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
         // Remove server fingerprinting headers
         $response->headers->remove('X-Powered-By');
         $response->headers->remove('Server');

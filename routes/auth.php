@@ -15,30 +15,35 @@ Route::middleware('guest')->group(function () {
     Route::get('/', [BerandaController::class, 'guest'])
         ->name('home');
 
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+    // Self-registration is DISABLED — accounts are created by Admin only.
+    // Route::get('register', [RegisteredUserController::class, 'create'])
+    //     ->name('register');
+    // Route::post('check-student', [RegisteredUserController::class, 'checkStudent'])
+    //     ->name('check.student');
+    // Route::post('register', [RegisteredUserController::class, 'store']);
 
-    Route::post('check-student', [RegisteredUserController::class, 'checkStudent'])
-        ->name('check.student');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // Keep the route name 'register' pointing to login to avoid broken links
+    Route::get('register', [AuthenticatedSessionController::class, 'create'])->name('register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
-        ->name('password.request');
+    // Forgot/Reset password via EMAIL is DISABLED to avoid hitting the 500/day email limit.
+    // Students can still change their password from their Profile page (no email needed).
+    // Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
+    //     ->name('password.request');
+    // Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+    //     ->name('password.email');
+    // Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+    //     ->name('password.reset');
+    // Route::post('reset-password', [NewPasswordController::class, 'store'])
+    //     ->name('password.store');
 
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->name('password.email');
-
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
-
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
+    // Keep route names to avoid broken links in any views that reference them
+    Route::get('forgot-password', fn() => redirect()->route('login'))->name('password.request');
+    Route::get('reset-password/{token}', fn() => redirect()->route('login'))->name('password.reset');
 });
 
 Route::middleware('auth')->group(function () {

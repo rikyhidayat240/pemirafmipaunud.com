@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\MahasiswaCredentials;
 use App\Models\ProgramStudi;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class MahasiswaController extends Controller
@@ -25,6 +29,9 @@ class MahasiswaController extends Controller
         $currentUsers = User::all();
         $users = User::getMahasiswaFromSheet($year);
 
+        $newCount = 0;
+        $updatedCount = 0;
+
         // Sync users
         try {
             foreach ($users as $user) {
@@ -32,16 +39,80 @@ class MahasiswaController extends Controller
                 if ($currentUser) {
                     // Update existing user (preserve email/password if already set)
                     $currentUser->update((array)$user);
+                    $updatedCount++;
                 } else {
-                    // Create new user — no password set, mahasiswa must register themselves
-                    User::create((array)$user);
+                    // Create new user with auto-generated password
+                    $plainPassword = $this->generatePassword();
+                    $nim = $user['nim'];
+                    $email = $nim . '@student.unud.ac.id';
+
+                    $newUser = User::create(array_merge((array)$user, [
+                        'email'             => $email,
+                        'password'          => Hash::make($plainPassword),
+                        'email_verified_at' => now(),
+                        'credentials_sent_at' => null, // will be set after email is sent
+                    ]));
+
+                    // Try to send credential email (non-blocking)
+                    try {
+                        Mail::to($email)->send(new MahasiswaCredentials($newUser, $plainPassword));
+                        $newUser->update(['credentials_sent_at' => now()]);
+                    } catch (\Exception $mailEx) {
+                        Log::warning('Credential email failed for nim=' . $nim . ': ' . $mailEx->getMessage());
+                        // Don't abort — account is created, email can be re-sent via artisan command
+                    }
+
+                    $newCount++;
                 }
             }
-            return redirect()->back()->with('success', 'Data mahasiswa tahun ' . $year . ' berhasil disinkronisasi.');
+            return redirect()->back()->with('success',
+                'Sinkronisasi selesai. ' . $newCount . ' akun baru dibuat, ' . $updatedCount . ' data diperbarui.');
         } catch (\Exception $e) {
             Log::error('Sync mahasiswa error year=' . $year . ': ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menyinkronkan data mahasiswa. Silakan coba lagi.');
         }
+    }
+
+    /**
+     * Resend credential email to a specific student.
+     */
+    public function sendCredentials(string $nim)
+    {
+        $mahasiswa = User::where('nim', $nim)->where('is_admin', false)->firstOrFail();
+
+        if (empty($mahasiswa->email)) {
+            return back()->with('error', 'Mahasiswa ini belum memiliki email yang terdaftar.');
+        }
+
+        try {
+            // Generate new password
+            $plainPassword = $this->generatePassword();
+            $mahasiswa->update([
+                'password'            => Hash::make($plainPassword),
+                'email_verified_at'   => now(),
+            ]);
+
+            Mail::to($mahasiswa->email)->send(new MahasiswaCredentials($mahasiswa, $plainPassword));
+            $mahasiswa->update(['credentials_sent_at' => now()]);
+
+            return back()->with('success', 'Credentials berhasil dikirim ke ' . $mahasiswa->email);
+        } catch (\Exception $e) {
+            Log::error('Send credentials error nim=' . $nim . ': ' . $e->getMessage());
+            return back()->with('error', 'Gagal mengirim email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate a secure random 8-character password.
+     */
+    private function generatePassword(): string
+    {
+        $upper  = strtoupper(Str::random(2));
+        $lower  = strtolower(Str::random(4));
+        $digits = rand(10, 99);
+        $chars  = str_split($upper . $lower . $digits);
+        shuffle($chars);
+        return implode('', $chars);
     }
 
     /**
@@ -110,21 +181,33 @@ class MahasiswaController extends Controller
                 $avatarPath = 'foto-mahasiswa/' . $avatarName;
             }
 
-            // Create new mahasiswa
-            // SEC-02: No default password — mahasiswa must self-register via /register page
-            User::create([
-                'nim' => $validatedData['nim'],
-                'nama' => $validatedData['nama'],
-                'email' => null, // email is set when mahasiswa registers themselves
-                'id_program_studi' => $validatedData['id_program_studi'],
-                'angkatan' => $validatedData['angkatan'],
-                'avatar' => $avatarPath,
-                'password' => null, // no default password
-                'email_verified_at' => null,
+            // Generate password acak dan email @student.unud.ac.id dari NIM
+            $plainPassword = $this->generatePassword();
+            $studentEmail  = isset($validatedData['email']) && !empty($validatedData['email'])
+                ? $validatedData['email']
+                : $validatedData['nim'] . '@student.unud.ac.id';
+
+            $newUser = User::create([
+                'nim'               => $validatedData['nim'],
+                'nama'              => $validatedData['nama'],
+                'email'             => $studentEmail,
+                'id_program_studi'  => $validatedData['id_program_studi'],
+                'angkatan'          => $validatedData['angkatan'],
+                'avatar'            => $avatarPath,
+                'password'          => Hash::make($plainPassword),
+                'email_verified_at' => now(),
+                'credentials_sent_at' => null,
             ]);
 
-            // Redirect back with success message
-            return back()->with('success', 'Data mahasiswa berhasil dibuat. Mahasiswa dapat mendaftar akun sendiri melalui halaman Registrasi.');
+            // Kirim email credentials
+            try {
+                Mail::to($studentEmail)->send(new MahasiswaCredentials($newUser, $plainPassword));
+                $newUser->update(['credentials_sent_at' => now()]);
+                return back()->with('success', 'Akun mahasiswa berhasil dibuat dan credentials telah dikirim ke ' . $studentEmail);
+            } catch (\Exception $mailEx) {
+                Log::warning('Credential email failed for nim=' . $validatedData['nim'] . ': ' . $mailEx->getMessage());
+                return back()->with('success', 'Akun mahasiswa berhasil dibuat. Email credentials gagal terkirim — gunakan tombol "Kirim Ulang" di tabel untuk mengirim ulang.');
+            }
         } catch (\Exception $e) {
             Log::error('Create mahasiswa error: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat membuat data mahasiswa. Silakan coba lagi.');
