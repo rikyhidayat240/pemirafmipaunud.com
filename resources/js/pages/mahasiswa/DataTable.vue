@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { ColumnDef, SortingState, ColumnFiltersState, PaginationState } from '@tanstack/vue-table'
-import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle } from 'lucide-vue-next'
+import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle, Mail } from 'lucide-vue-next'
 import { FlexRender, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, useVueTable } from '@tanstack/vue-table'
 
 // Define props untuk data mahasiswa
@@ -38,6 +38,7 @@ const pagination = ref<PaginationState>({
 
 // State untuk sync mahasiswa
 const isSyncing = ref(false);
+const sendingNim = ref<string | null>(null);
 
 // Computed values
 const activeFilters = computed(() => {
@@ -183,6 +184,20 @@ const handleSyncMahasiswa = () => {
     );
 };
 
+// Function untuk send credentials ke satu mahasiswa
+const handleSendCredentials = (nim: string, event: Event) => {
+    event.stopPropagation(); // prevent row click from firing
+    if (!confirm('Kirim ulang email credentials ke mahasiswa ini? Password lama akan direset.')) return;
+    sendingNim.value = nim;
+    router.post(
+        route('users.send-credentials', nim),
+        {},
+        {
+            onFinish: () => { sendingNim.value = null; }
+        }
+    );
+};
+
 // Submit handler
 const handleSuccess = () => {
     isDialogOpen.value = false
@@ -313,8 +328,10 @@ watch(isViewDialogOpen, (newValue) => {
                         <DialogHeader>
                             <DialogTitle>Sinkronisasi Data Mahasiswa</DialogTitle>
                             <DialogDescription>
-                                Apakah Anda yakin ingin menyinkronkan data mahasiswa tahun {{ new Date().getFullYear() }} dari Excel? 
-                                Proses ini akan memperbarui atau menambahkan data mahasiswa yang ada.
+                                Apakah Anda yakin ingin menyinkronkan data mahasiswa tahun {{ new Date().getFullYear() }} dari Excel?
+                                <br /><br />
+                                Mahasiswa baru akan <strong>otomatis dibuatkan akun</strong> dengan password acak dan dikirim ke email <code>NIM@student.unud.ac.id</code>.
+                                Data yang sudah ada hanya akan diperbarui (password tidak berubah).
                             </DialogDescription>
                         </DialogHeader>
 
@@ -401,6 +418,22 @@ watch(isViewDialogOpen, (newValue) => {
                             @click="() => handleRowClick(row.original)">
                             <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id" class="truncate max-w-96">
                                 <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                            </TableCell>
+                            <!-- Kirim Credentials button -->
+                            <TableCell class="w-10 text-right" @click.stop>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2 text-xs gap-1"
+                                    :class="row.original.credentials_sent_at ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'"
+                                    :disabled="sendingNim === row.original.nim"
+                                    :title="row.original.credentials_sent_at ? 'Email sudah terkirim — kirim ulang?' : 'Kirim credentials'"
+                                    @click="handleSendCredentials(row.original.nim, $event)"
+                                >
+                                    <LoaderCircle v-if="sendingNim === row.original.nim" class="h-3 w-3 animate-spin" />
+                                    <Mail v-else class="h-3 w-3" />
+                                    {{ row.original.credentials_sent_at ? '' : 'Kirim' }}
+                                </Button>
                             </TableCell>
                         </TableRow>
                     </template>
