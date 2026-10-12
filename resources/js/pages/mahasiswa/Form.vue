@@ -48,6 +48,12 @@ const handleAvatarChange = (event: Event) => {
     }
 };
 
+// Fallback jika file gambar tidak ditemukan
+const handleImageError = (event: Event) => {
+    const target = event.target as HTMLImageElement;
+    target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23888888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>';
+};
+
 // submit function
 const submit = () => {
     switch (props.mode) {
@@ -188,9 +194,11 @@ const submit = () => {
                                 class="aspect-video h-full w-full border rounded-md object-contain" />
                             <img v-else :src="mahasiswaData?.avatar
                                 ? `/storage/${mahasiswaData.avatar}`
-                                : '/images/blank-profile-picture.webp'" alt="Avatar" :class="cn(
+                                : '/images/blank-profile-picture.webp'"
+                                @error="handleImageError"
+                                alt="Avatar" :class="cn(
                                     form.errors.avatar ? 'border-red-500' : '',
-                                    'aspect-video h-full w-full border rounded-md object-contain'
+                                    'aspect-video h-full w-full border rounded-md object-contain p-2'
                                 )" />
                         </AspectRatio>
                     </div>
