@@ -106,7 +106,8 @@ const submit = () => {
                         </Label>
                         <Input id="nim" type="text" :tabindex="1" v-model="form.nim" :required="mode !== 'view'"
                             :disabled="form.processing || mode === 'view'" :readonly="mode === 'view'"
-                            placeholder="Masukkan NIM Mahasiswa" />
+                            maxlength="15"
+                            placeholder="Masukkan NIM Mahasiswa (maks. 15 digit)" />
                         <InputError :message="form.errors.nim" />
                     </div>
 

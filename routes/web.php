@@ -28,6 +28,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('users/sync-data/{year}', [MahasiswaController::class, 'syncMahasiswa'])
             ->name('users.sync-data');
 
+        Route::post('users/send-bulk-credentials', [MahasiswaController::class, 'sendBulkCredentials'])
+            ->name('users.send-bulk-credentials');
+
         Route::post('users/{nim}/send-credentials', [MahasiswaController::class, 'sendCredentials'])
             ->name('users.send-credentials');
 
@@ -41,6 +44,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('candidates', KandidatController::class)
             ->only(['index', 'store', 'update', 'destroy']);
     });
+});
+
+Route::get('/linkstorage', function () {
+    \Illuminate\Support\Facades\Artisan::call('storage:link');
+    return 'Storage linked successfully!';
 });
 
 require __DIR__ . '/settings.php';

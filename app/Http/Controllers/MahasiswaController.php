@@ -103,6 +103,55 @@ class MahasiswaController extends Controller
     }
 
     /**
+     * Send credential email to all students (Bulk).
+     */
+    public function sendBulkCredentials(Request $request)
+    {
+        $onlyUnsent = $request->boolean('only_unsent', false);
+
+        $query = User::where('is_admin', false)
+            ->whereNotNull('email')
+            ->where('email', '!=', '');
+
+        if ($onlyUnsent) {
+            $query->whereNull('credentials_sent_at');
+        }
+
+        $mahasiswaList = $query->get();
+
+        if ($mahasiswaList->isEmpty()) {
+            return back()->with('error', 'Tidak ada mahasiswa yang memenuhi syarat pengiriman email.');
+        }
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($mahasiswaList as $mahasiswa) {
+            try {
+                $plainPassword = $this->generatePassword();
+                $mahasiswa->update([
+                    'password'          => Hash::make($plainPassword),
+                    'email_verified_at' => now(),
+                ]);
+
+                Mail::to($mahasiswa->email)->send(new MahasiswaCredentials($mahasiswa, $plainPassword));
+                $mahasiswa->update(['credentials_sent_at' => now()]);
+                $sent++;
+            } catch (\Exception $e) {
+                $failed++;
+                Log::warning("Bulk credential email failed for nim={$mahasiswa->nim}: " . $e->getMessage());
+            }
+        }
+
+        $msg = "Pengiriman bulk selesai: {$sent} email berhasil terkirim.";
+        if ($failed > 0) {
+            $msg .= " ({$failed} gagal).";
+        }
+
+        return back()->with($failed > 0 && $sent === 0 ? 'error' : 'success', $msg);
+    }
+
+    /**
      * Generate a secure random 8-character password.
      */
     private function generatePassword(): string
@@ -142,14 +191,14 @@ class MahasiswaController extends Controller
     {
         // Validate input data
         $validatedData = $request->validate([
-            'nim' => 'required|string|digits:10|unique:mahasiswa,nim',
+            'nim' => 'required|string|max:15|unique:mahasiswa,nim',
             'nama' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:mahasiswa,email',
             'id_program_studi' => 'required|exists:program_studi,id',
             'angkatan' => 'required|integer|min:2000|max:2100',
             'avatar' => 'nullable|image|max:4096|mimes:jpeg,png,jpg,webp',
         ], [
-            'nim.digits' => 'NIM harus terdiri dari 10 digit.',
+            'nim.max' => 'NIM maksimal 15 digit.',
             'nim.unique' => 'NIM sudah terdaftar.',
             'nama.max' => 'Nama maksimal 255 karakter.',
             'email.max' => 'Email maksimal 255 karakter.',
@@ -221,14 +270,14 @@ class MahasiswaController extends Controller
     {
         // Validate input data
         $validatedData = $request->validate([
-            'nim' => 'required|string|digits:10',
+            'nim' => 'required|string|max:15',
             'nama' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'id_program_studi' => 'required|exists:program_studi,id',
             'angkatan' => 'required|integer|min:2000|max:2100',
             'avatar' => 'nullable|image|max:4096|mimes:jpeg,png,jpg,webp',
         ], [
-            'nim.digits' => 'NIM harus terdiri dari 10 digit.',
+            'nim.max' => 'NIM maksimal 15 digit.',
             'nama.max' => 'Nama maksimal 255 karakter.',
             'email.max' => 'Email maksimal 255 karakter.',
             'id_program_studi.exists' => 'Program studi tidak valid.',

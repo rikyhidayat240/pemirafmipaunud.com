@@ -31,10 +31,10 @@ class RegisteredUserController extends Controller
     public function checkStudent(Request $request)
     {
         $request->validate([
-            'nim' => 'required|string|digits:10',
+            'nim' => 'required|string|max:15',
             'nama' => 'required|string|max:255',
         ], [
-            'nim.digits' => 'NIM harus terdiri dari 10 digit.',
+            'nim.max' => 'NIM maksimal 15 digit.',
             'nama.max' => 'Nama harus terdiri dari maksimal 255 karakter.',
         ]);
 
@@ -73,7 +73,7 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'nim' => 'required|string|digits:10|exists:mahasiswa,nim',
+            'nim' => 'required|string|max:15|exists:mahasiswa,nim',
             'nama' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:mahasiswa,email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],

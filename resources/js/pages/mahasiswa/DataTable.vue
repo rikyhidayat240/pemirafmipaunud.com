@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { ColumnDef, SortingState, ColumnFiltersState, PaginationState } from '@tanstack/vue-table'
-import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle, Mail } from 'lucide-vue-next'
+import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle, Mail, Send } from 'lucide-vue-next'
 import { FlexRender, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, useVueTable } from '@tanstack/vue-table'
 
 // Define props untuk data mahasiswa
@@ -30,19 +30,30 @@ const globalFilter = ref('')
 const isDialogOpen = ref(false)
 const isSyncDialogOpen = ref(false)
 const isViewDialogOpen = ref(false)
+const isBulkDialogOpen = ref(false)
 const selectedRowData = ref<any>(null)
 const pagination = ref<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
 })
 
-// State untuk sync mahasiswa
+// State untuk sync mahasiswa & credentials
 const isSyncing = ref(false);
 const sendingNim = ref<string | null>(null);
+const isBulkSending = ref(false);
+const bulkOnlyUnsent = ref(true);
 
 // Computed values
 const activeFilters = computed(() => {
     return columnFiltersState.value.filter(filter => filter.value !== undefined && filter.value !== '')
+})
+
+const totalWithEmail = computed(() => {
+    return props.data.filter((u: any) => u.email && !u.is_admin).length;
+})
+
+const totalUnsent = computed(() => {
+    return props.data.filter((u: any) => u.email && !u.credentials_sent_at && !u.is_admin).length;
 })
 
 // Setup table instance
@@ -194,6 +205,27 @@ const handleSendCredentials = (nim: string, event: Event) => {
         {},
         {
             onFinish: () => { sendingNim.value = null; }
+        }
+    );
+};
+
+// Kirim password massal (bulk)
+const handleBulkSend = () => {
+    isBulkSending.value = true;
+    router.post(
+        route('users.send-bulk-credentials'),
+        { only_unsent: bulkOnlyUnsent.value },
+        {
+            onSuccess: () => {
+                isBulkDialogOpen.value = false;
+                isBulkSending.value = false;
+            },
+            onError: () => {
+                isBulkSending.value = false;
+            },
+            onFinish: () => {
+                isBulkSending.value = false;
+            }
         }
     );
 };
@@ -350,6 +382,63 @@ watch(isViewDialogOpen, (newValue) => {
                             >
                                 <LoaderCircle v-if="isSyncing" class="h-4 w-4 animate-spin" />
                                 Sinkronkan
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                <!-- Bulk Send Credentials Button & Dialog -->
+                <Dialog v-model:open="isBulkDialogOpen">
+                    <DialogTrigger as-child>
+                        <Button variant="outline" size="sm" class="h-9 gap-1.5 border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10" title="Kirim password ke email">
+                            <Mail class="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            <span class="text-xs font-semibold">Kirim Massal</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent class="max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle class="flex items-center gap-2">
+                                <Mail class="h-5 w-5 text-emerald-600" />
+                                Kirim Password ke Semua Mahasiswa
+                            </DialogTitle>
+                            <DialogDescription class="pt-2 space-y-3">
+                                <p>
+                                    Sistem akan membuatkan password baru secara otomatis dan mengirimkannya langsung ke email masing-masing mahasiswa.
+                                </p>
+                                <div class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-foreground space-y-1">
+                                    <p><strong>Total Mahasiswa dengan email:</strong> {{ totalWithEmail }} orang</p>
+                                    <p><strong>Belum pernah dikirimi email:</strong> {{ totalUnsent }} orang</p>
+                                </div>
+                                <div class="pt-2 flex items-center gap-2">
+                                    <input 
+                                        type="checkbox" 
+                                        id="bulkOnlyUnsent" 
+                                        v-model="bulkOnlyUnsent"
+                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <label for="bulkOnlyUnsent" class="text-xs text-foreground font-medium cursor-pointer">
+                                        Hanya kirim ke yang belum pernah menerima email ({{ totalUnsent }} orang)
+                                    </label>
+                                </div>
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div class="flex justify-end gap-2 pt-4">
+                            <Button 
+                                variant="outline" 
+                                @click="isBulkDialogOpen = false" 
+                                :disabled="isBulkSending"
+                            >
+                                Batal
+                            </Button>
+                            <Button 
+                                @click="handleBulkSend" 
+                                :disabled="isBulkSending || (bulkOnlyUnsent ? totalUnsent === 0 : totalWithEmail === 0)"
+                                class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                <LoaderCircle v-if="isBulkSending" class="h-4 w-4 animate-spin" />
+                                <Send v-else class="h-4 w-4" />
+                                Kirim Sekarang
                             </Button>
                         </div>
                     </DialogContent>
