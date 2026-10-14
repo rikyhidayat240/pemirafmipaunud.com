@@ -45,11 +45,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->only(['index', 'store', 'update', 'destroy']);
     });
 });
-
-Route::get('/linkstorage', function () {
-    \Illuminate\Support\Facades\Artisan::call('storage:link');
-    return 'Storage linked successfully!';
-});
-
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

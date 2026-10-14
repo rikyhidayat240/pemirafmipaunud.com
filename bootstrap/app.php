@@ -25,13 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        // Register alias for HandleIsAdmin middleware
         $middleware->alias([
             'admin' => HandleIsAdmin::class,
             'verified' => HandleIsVerified::class,
         ]);
 
-        // SECURITY: Add security headers to all responses
         $middleware->append(SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
