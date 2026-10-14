@@ -87,106 +87,106 @@ class SuratSuaraController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(\App\Http\Requests\StoreVoteRequest $request)
     {
-        $request->validate([
-            'id_kandidat_bem' => 'nullable|exists:kandidat,id',
-            'id_kandidat_hima' => 'nullable|exists:kandidat,id',
-            'ttd' => 'required|string|max:700000', // SEC-08: ~525KB decoded max (base64 overhead ~33%)
-        ]);
-
-        if (!$request->id_kandidat_bem && !$request->id_kandidat_hima) {
-            return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Tidak ada kandidat yang dipilih.']);
-        }
-
         $kandidatBem = $request->id_kandidat_bem ? Kandidat::find($request->id_kandidat_bem) : null;
         $kandidatHima = $request->id_kandidat_hima ? Kandidat::find($request->id_kandidat_hima) : null;
 
         $user = User::where('nim', auth('web')->user()->nim)->first();
 
-        // Wrap everything in a database transaction
-        return DB::transaction(function () use ($request, $kandidatBem, $kandidatHima, $user) {
-            
-            // SECURITY FIX: Double Vote Check inside Transaction Lock
-            // We check the database directly in this transaction to see if they already voted
-            $alreadyVotedBem = $kandidatBem ? DB::table('surat_suara')
-                ->where('nim', $user->nim)
-                ->where('id_kegiatan', $kandidatBem->id_kegiatan)
-                ->where('has_vote', true)
-                ->exists() : false;
+        try {
+            // Wrap everything in a database transaction
+            return DB::transaction(function () use ($request, $kandidatBem, $kandidatHima, $user) {
+                // Kunci baris user untuk isolasi transaksi voting
+                User::where('nim', $user->nim)->lockForUpdate()->first();
 
-            $alreadyVotedHima = $kandidatHima ? DB::table('surat_suara')
-                ->where('nim', $user->nim)
-                ->where('id_kegiatan', $kandidatHima->id_kegiatan)
-                ->where('has_vote', true)
-                ->exists() : false;
+                // Double Vote Check inside Transaction Lock
+                $alreadyVotedBem = $kandidatBem ? DB::table('surat_suara')
+                    ->where('nim', $user->nim)
+                    ->where('id_kegiatan', $kandidatBem->id_kegiatan)
+                    ->where('has_vote', true)
+                    ->exists() : false;
 
-            if ($alreadyVotedBem || $alreadyVotedHima) {
-                // SECURITY: Log double-vote attempt
-                Log::warning('[SECURITY] Double-vote attempt detected in Pemira', [
-                    'nim'               => $user->nim,
-                    'already_voted_bem' => $alreadyVotedBem,
-                    'already_voted_hima'=> $alreadyVotedHima,
-                    'ip'                => $request->ip(),
-                    'user_agent'        => $request->userAgent(),
-                ]);
-                return redirect()->route('dashboard')
-                    ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda sudah memberikan suara! Suara ganda ditolak.']);
-            }
+                $alreadyVotedHima = $kandidatHima ? DB::table('surat_suara')
+                    ->where('nim', $user->nim)
+                    ->where('id_kegiatan', $kandidatHima->id_kegiatan)
+                    ->where('has_vote', true)
+                    ->exists() : false;
 
-            $ttdPath = null;
-            if ($request->ttd) {
-                $image = $request->ttd;
-                // SECURITY: Strict whitelist of allowed image types for TTD
-                $allowedTypes = ['png', 'jpeg', 'jpg'];
-                if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
-                    $image = substr($image, strpos($image, ',') + 1);
-                    $detectedType = strtolower($type[1]);
-
-                    // SECURITY: Reject if type not in whitelist
-                    if (!in_array($detectedType, $allowedTypes, true)) {
-                        Log::warning('[SECURITY] Rejected invalid TTD image type', [
-                            'nim'  => $user->nim,
-                            'type' => $detectedType,
-                            'ip'   => $request->ip(),
-                        ]);
-                        return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Format tanda tangan tidak valid.']);
-                    }
-                    
-                    $image = base64_decode($image);
-                    if ($image === false) {
-                        return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Gagal memproses tanda tangan.']);
-                    }
-                    
-                    // SECURITY: Use random filename — never trust client-supplied data for filename
-                    $filename = $user->nim . '_' . time() . '_' . Str::random(16) . '.' . $detectedType;
-                    Storage::disk('public')->put('ttd-mahasiswa/' . $filename, $image);
-                    $ttdPath = 'ttd-mahasiswa/' . $filename;
+                if ($alreadyVotedBem || $alreadyVotedHima) {
+                    // SECURITY: Log double-vote attempt (NIM only, no candidate choices)
+                    Log::warning('[SECURITY] Double-vote attempt detected in Pemira', [
+                        'nim'               => $user->nim,
+                        'already_voted_bem' => $alreadyVotedBem,
+                        'already_voted_hima'=> $alreadyVotedHima,
+                        'ip'                => $request->ip(),
+                        'user_agent'        => $request->userAgent(),
+                    ]);
+                    return redirect()->route('dashboard')
+                        ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda sudah memberikan suara! Suara ganda ditolak.']);
                 }
-            }
 
-            // Mark user as voted in pivot table
-            $syncData = [];
-            if ($kandidatBem) {
-                $syncData[$kandidatBem->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
-            }
-            if ($kandidatHima) {
-                $syncData[$kandidatHima->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
-            }
-            
-            if (!empty($syncData)) {
-                $user->kegiatan()->syncWithoutDetaching($syncData);
-            }
+                $ttdPath = null;
+                if ($request->ttd) {
+                    $image = $request->ttd;
+                    // SECURITY: Strict whitelist of allowed image types for TTD
+                    $allowedTypes = ['png', 'jpeg', 'jpg'];
+                    if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
+                        $image = substr($image, strpos($image, ',') + 1);
+                        $detectedType = strtolower($type[1]);
 
-            // Increment candidate votes
-            if ($kandidatBem) {
-                $kandidatBem->increment('jumlah_suara');
-            }
-            if ($kandidatHima) {
-                $kandidatHima->increment('jumlah_suara');
-            }
+                        // SECURITY: Reject if type not in whitelist
+                        if (!in_array($detectedType, $allowedTypes, true)) {
+                            Log::warning('[SECURITY] Rejected invalid TTD image type', [
+                                'nim'  => $user->nim,
+                                'type' => $detectedType,
+                                'ip'   => $request->ip(),
+                            ]);
+                            return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Format tanda tangan tidak valid.']);
+                        }
+                        
+                        $image = base64_decode($image);
+                        if ($image === false) {
+                            return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Gagal memproses tanda tangan.']);
+                        }
+                        
+                        // SECURITY: Use random filename — never trust client-supplied data for filename
+                        $filename = $user->nim . '_' . time() . '_' . Str::random(16) . '.' . $detectedType;
+                        Storage::disk('public')->put('ttd-mahasiswa/' . $filename, $image);
+                        $ttdPath = 'ttd-mahasiswa/' . $filename;
+                    }
+                }
 
-            return Inertia::render('ThankYou');
-        });
+                // Mark user as voted in pivot table
+                $syncData = [];
+                if ($kandidatBem) {
+                    $syncData[$kandidatBem->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+                }
+                if ($kandidatHima) {
+                    $syncData[$kandidatHima->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+                }
+                
+                if (!empty($syncData)) {
+                    $user->kegiatan()->syncWithoutDetaching($syncData);
+                }
+
+                // Increment candidate votes atomically without row lock on kandidat
+                if ($kandidatBem) {
+                    $kandidatBem->increment('jumlah_suara');
+                }
+                if ($kandidatHima) {
+                    $kandidatHima->increment('jumlah_suara');
+                }
+
+                return Inertia::render('ThankYou');
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::warning('[SECURITY] Duplicate vote detected via unique constraint in Pemira', [
+                'nim' => $user->nim,
+                'ip'  => $request->ip(),
+            ]);
+            return redirect()->route('dashboard')
+                ->with('alert', ['type' => 'error', 'title' => 'Pemilihan Sudah Dilakukan', 'message' => 'Anda sudah memberikan suara! Suara ganda ditolak.']);
+        }
     }
 }
