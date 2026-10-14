@@ -6,6 +6,7 @@ use App\Mail\MahasiswaCredentials;
 use App\Models\ProgramStudi;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -35,23 +36,33 @@ class MahasiswaController extends Controller
         // Sync users
         try {
             foreach ($users as $user) {
-                $currentUser = $currentUsers->firstWhere('nim', $user['nim']);
+                $userArray = (array) $user;
+                $fillableData = Arr::only($userArray, ['nim', 'nama', 'id_program_studi', 'angkatan']);
+                $status = $userArray['status'] ?? 'aktif';
+
+                $currentUser = $currentUsers->firstWhere('nim', $userArray['nim']);
                 if ($currentUser) {
                     // Update existing user (preserve email/password if already set)
-                    $currentUser->update((array)$user);
+                    $currentUser->fill($fillableData);
+                    $currentUser->status = $status;
+                    $currentUser->save();
                     $updatedCount++;
                 } else {
                     // Create new user with auto-generated password
                     $plainPassword = $this->generatePassword();
-                    $nim = $user['nim'];
+                    $nim = $userArray['nim'];
                     $email = $nim . '@student.unud.ac.id';
 
-                    $newUser = User::create(array_merge((array)$user, [
+                    $newUser = new User();
+                    $newUser->fill(array_merge($fillableData, [
                         'email'             => $email,
                         'password'          => Hash::make($plainPassword),
                         'email_verified_at' => now(),
                         'credentials_sent_at' => null, // will be set after email is sent
                     ]));
+                    $newUser->status = $status;
+                    $newUser->is_admin = false;
+                    $newUser->save();
 
                     // Try to send credential email (non-blocking)
                     try {
@@ -152,16 +163,11 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * Generate a secure random 8-character password.
+     * Generate a secure random password using CSPRNG.
      */
-    private function generatePassword(): string
+    public function generatePassword(): string
     {
-        $upper  = strtoupper(Str::random(2));
-        $lower  = strtolower(Str::random(4));
-        $digits = rand(10, 99);
-        $chars  = str_split($upper . $lower . $digits);
-        shuffle($chars);
-        return implode('', $chars);
+        return Str::password(12, letters: true, numbers: true, symbols: false, spaces: false);
     }
 
     /**
@@ -236,7 +242,8 @@ class MahasiswaController extends Controller
                 ? $validatedData['email']
                 : $validatedData['nim'] . '@student.unud.ac.id';
 
-            $newUser = User::create([
+            $newUser = new User();
+            $newUser->fill([
                 'nim'               => $validatedData['nim'],
                 'nama'              => $validatedData['nama'],
                 'email'             => $studentEmail,
@@ -247,6 +254,9 @@ class MahasiswaController extends Controller
                 'email_verified_at' => now(),
                 'credentials_sent_at' => null,
             ]);
+            $newUser->status = 'aktif';
+            $newUser->is_admin = false;
+            $newUser->save();
 
             // Kirim email credentials
             try {

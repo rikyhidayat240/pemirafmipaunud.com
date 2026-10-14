@@ -34,6 +34,8 @@ class UserFactory extends Factory
             'email_verified_at' => null,
             // 'password' => static::$password ??= Hash::make('musmafmipa'),
             'password' => null,
+            'status' => 'aktif',
+            'is_admin' => false,
             'remember_token' => Str::random(10),
         ];
     }

@@ -17,7 +17,7 @@ class SecurityVoteTest extends TestCase
 
     private function createVoter(array $attributes = []): User
     {
-        return User::create(array_merge([
+        return User::forceCreate(array_merge([
             'nim'                 => '2108561001',
             'id_program_studi'    => 1,
             'nama'                => 'Mahasiswa Uji',
