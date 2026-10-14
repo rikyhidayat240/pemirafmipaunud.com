@@ -21,6 +21,15 @@ class Kandidat extends Model
         'jumlah_suara',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization to protect ballot tallies.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'jumlah_suara',
+    ];
+
     public function kegiatan()
     {
         return $this->belongsTo(Kegiatan::class, 'id_kegiatan');

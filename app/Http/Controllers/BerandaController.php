@@ -106,46 +106,89 @@ class BerandaController extends Controller
 
     public function resultBem()
     {
-        $kegiatan = Kegiatan::where('tahun', now()->year)
-            ->where('ruang_lingkup', 'fakultas')
-            ->where('waktu_selesai', '>', now())
-            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->first();
-            
-        if (!$kegiatan) {
+        $user = auth('web')->user();
+
+        // Admin can view live results anytime
+        if ($user && $user->is_admin) {
             $kegiatan = Kegiatan::where('tahun', now()->year)
                 ->where('ruang_lingkup', 'fakultas')
-                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->latest('waktu_selesai')->first();
+                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
+                ->latest('waktu_selesai')
+                ->first();
+
+            if ($kegiatan) {
+                $kegiatan->kandidat->each->makeVisible('jumlah_suara');
+            }
+
+            return Inertia::render('ResultBem', [
+                'kegiatan' => $kegiatan,
+            ]);
         }
 
+        // Regular users can ONLY view ended kegiatan (waktu_selesai <= now)
+        $kegiatan = Kegiatan::where('tahun', now()->year)
+            ->where('ruang_lingkup', 'fakultas')
+            ->where('waktu_selesai', '<=', now())
+            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
+            ->latest('waktu_selesai')
+            ->first();
+
+        if (! $kegiatan) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'info',
+                'title' => 'Hasil Belum Tersedia',
+                'message' => 'Hasil pemilihan BEM belum dapat dilihat karena pemilihan masih berlangsung atau belum ada kegiatan yang selesai.',
+            ]);
+        }
+
+        // Reveal jumlah_suara only for ended event
+        $kegiatan->kandidat->each->makeVisible('jumlah_suara');
+
         return Inertia::render('ResultBem', [
-            'kegiatan' => $kegiatan
+            'kegiatan' => $kegiatan,
         ]);
     }
 
     public function resultHima()
     {
-        $kegiatans = Kegiatan::where('tahun', now()->year)
-            ->where('ruang_lingkup', 'program studi')
-            ->where('waktu_selesai', '>', now())
-            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->get();
-            
-        if ($kegiatans->isEmpty()) {
-            // Fallback to latest HIMA events of this year
-            $latestHima = Kegiatan::where('tahun', now()->year)
+        $user = auth('web')->user();
+
+        if ($user && $user->is_admin) {
+            $kegiatans = Kegiatan::where('tahun', now()->year)
                 ->where('ruang_lingkup', 'program studi')
-                ->latest('waktu_selesai')
-                ->first();
-                
-            if ($latestHima) {
-                $kegiatans = Kegiatan::where('tahun', now()->year)
-                    ->where('ruang_lingkup', 'program studi')
-                    ->where('waktu_selesai', $latestHima->waktu_selesai)
-                    ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])->get();
-            }
+                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
+                ->get();
+
+            $kegiatans->each(function ($k) {
+                $k->kandidat->each->makeVisible('jumlah_suara');
+            });
+
+            return Inertia::render('ResultHima', [
+                'kegiatans' => $kegiatans,
+            ]);
         }
 
+        // Regular users can ONLY view ended kegiatan
+        $kegiatans = Kegiatan::where('tahun', now()->year)
+            ->where('ruang_lingkup', 'program studi')
+            ->where('waktu_selesai', '<=', now())
+            ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
+            ->get();
+
+        if ($kegiatans->isEmpty()) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'info',
+                'title' => 'Hasil Belum Tersedia',
+                'message' => 'Hasil pemilihan HIMA belum dapat dilihat karena pemilihan masih berlangsung atau belum ada kegiatan yang selesai.',
+            ]);
+        }
+
+        $kegiatans->each(function ($k) {
+            $k->kandidat->each->makeVisible('jumlah_suara');
+        });
+
         return Inertia::render('ResultHima', [
-            'kegiatans' => $kegiatans
+            'kegiatans' => $kegiatans,
         ]);
     }
 }
