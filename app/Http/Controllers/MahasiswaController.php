@@ -223,7 +223,7 @@ class MahasiswaController extends Controller
             if ($request->hasFile('avatar') && $request->file('avatar')->isValid()) {
                 // Get the uploaded file
                 $avatarFile = $request->file('avatar');
-                $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
+                $avatarName = $avatarFile->hashName();
 
                 // Define the avatar destination path
                 $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
@@ -328,7 +328,7 @@ class MahasiswaController extends Controller
 
                 // Store new avatar
                 $avatarFile = $request->file('avatar');
-                $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
+                $avatarName = $avatarFile->hashName();
                 Storage::disk('public')->putFileAs('foto-mahasiswa', $avatarFile, $avatarName);
                 $avatarPath = 'foto-mahasiswa/' . $avatarName;
             }

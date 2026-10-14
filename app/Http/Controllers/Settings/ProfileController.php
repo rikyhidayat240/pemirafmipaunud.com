@@ -43,7 +43,7 @@ class ProfileController extends Controller
             $avatarPath = null;
             if ($request->hasFile('avatar') && $request->file('avatar')->isValid()) {
                 $avatarFile = $request->file('avatar');
-                $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
+                $avatarName = $avatarFile->hashName();
 
                 $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
                 if (!file_exists($avatarDestination)) {

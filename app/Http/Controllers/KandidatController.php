@@ -89,7 +89,7 @@ class KandidatController extends Controller
             if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
                 // Get the uploaded file
                 $fotoFile = $request->file('foto');
-                $fotoName = time() . '_' . $fotoFile->getClientOriginalName();
+                $fotoName = $fotoFile->hashName();
 
                 // Define the foto destination path
                 $fotoDestination = Storage::disk('public')->path('foto-kandidat');
@@ -183,7 +183,7 @@ class KandidatController extends Controller
 
                 // Store new foto
                 $fotoFile = $request->file('foto');
-                $fotoName = time() . '_' . $fotoFile->getClientOriginalName();
+                $fotoName = $fotoFile->hashName();
                 Storage::disk('public')->putFileAs('foto-kandidat', $fotoFile, $fotoName);
                 $fotoPath = 'foto-kandidat/' . $fotoName;
             }

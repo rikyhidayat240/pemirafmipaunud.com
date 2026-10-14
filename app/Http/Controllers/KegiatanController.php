@@ -80,7 +80,7 @@ class KegiatanController extends Controller
             if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
                 // Get the uploaded file
                 $fotoFile = $request->file('foto');
-                $fotoName = time() . '_' . $fotoFile->getClientOriginalName();
+                $fotoName = $fotoFile->hashName();
 
                 // Define the avatar destination path
                 $fotoDestination = Storage::disk('public')->path('foto-kegiatan');
@@ -223,7 +223,7 @@ class KegiatanController extends Controller
 
                 // Store new foto
                 $fotoFile = $request->file('foto');
-                $fotoName = time() . '_' . $fotoFile->getClientOriginalName();
+                $fotoName = $fotoFile->hashName();
                 Storage::disk('public')->putFileAs('foto-kegiatan', $fotoFile, $fotoName);
                 $fotoPath = 'foto-kegiatan/' . $fotoName;
             }
