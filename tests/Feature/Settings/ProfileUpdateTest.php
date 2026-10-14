@@ -3,7 +3,7 @@
 use App\Models\User;
 
 test('profile page is displayed', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this
         ->actingAs($user)
@@ -13,34 +13,34 @@ test('profile page is displayed', function () {
 });
 
 test('profile information can be updated', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this
         ->actingAs($user)
-        ->patch('/settings/profile', [
-            'nim' => '123456789',
+        ->put('/settings/profile', [
+            'nim' => $user->nim,
             'nama' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test@student.unud.ac.id',
         ]);
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect('/settings/profile');
+        ->assertRedirect('/verify-email');
 
     $user->refresh();
 
-    expect($user->name)->toBe('Test User');
-    expect($user->email)->toBe('test@example.com');
-    expect($user->email_verified_at)->toBeNull();
+    expect($user->nama)->toBe('Test User');
+    expect($user->email)->toBe('test@student.unud.ac.id');
 });
 
 test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email' => 'test@student.unud.ac.id', 'email_verified_at' => now()]);
 
     $response = $this
         ->actingAs($user)
-        ->patch('/settings/profile', [
-            'nim' => '123456789',
+        ->from('/settings/profile')
+        ->put('/settings/profile', [
+            'nim' => $user->nim,
             'nama' => 'Test User',
             'email' => $user->email,
         ]);
@@ -52,8 +52,8 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
-    $user = User::factory()->create();
+test('self account deletion is disabled and returns 404 or 405', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this
         ->actingAs($user)
@@ -61,27 +61,6 @@ test('user can delete their account', function () {
             'password' => 'password',
         ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/settings/profile')
-        ->delete('/settings/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrors('password')
-        ->assertRedirect('/settings/profile');
-
+    expect(in_array($response->getStatusCode(), [404, 405]))->toBeTrue();
     expect($user->fresh())->not->toBeNull();
 });
