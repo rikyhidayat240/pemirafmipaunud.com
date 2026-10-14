@@ -178,6 +178,11 @@ class SuratSuaraController extends Controller
                     $kandidatHima->increment('jumlah_suara');
                 }
 
+                Log::info('[VOTE] Vote cast successfully in Pemira', [
+                    'nim' => $user->nim,
+                    'ip'  => $request->ip(),
+                ]);
+
                 return Inertia::render('ThankYou');
             });
         } catch (\Illuminate\Database\QueryException $e) {
