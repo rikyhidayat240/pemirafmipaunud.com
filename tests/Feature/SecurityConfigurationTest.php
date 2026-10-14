@@ -46,4 +46,28 @@ class SecurityConfigurationTest extends TestCase
         $this->assertStringNotContainsString('my_sensitive_name', $createdUser->avatar);
         Storage::disk('public')->assertExists($createdUser->avatar);
     }
+
+    public function test_trusted_proxy_configuration_resolves_client_ip_safely(): void
+    {
+        // 1. When proxy is trusted, client IP resolves to the forwarded IP
+        config(['trustedproxy.proxies' => ['192.168.1.50']]);
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '192.168.1.50',
+            'HTTP_X_FORWARDED_FOR' => '203.0.113.195',
+        ])->get('/');
+
+        $this->assertEquals('203.0.113.195', request()->ip());
+
+        // 2. When proxy is not in trusted list, client IP remains REMOTE_ADDR (prevents spoofing)
+        \Illuminate\Http\Middleware\TrustProxies::flushState();
+        config(['trustedproxy.proxies' => ['192.168.1.50']]);
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.2',
+            'HTTP_X_FORWARDED_FOR' => '203.0.113.195',
+        ])->get('/');
+
+        $this->assertEquals('198.51.100.2', request()->ip());
+    }
 }

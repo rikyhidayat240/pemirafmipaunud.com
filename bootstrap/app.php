@@ -17,13 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $trustedProxies = env('TRUSTED_PROXIES');
-        if (!empty($trustedProxies)) {
-            $proxies = array_filter(array_map('trim', explode(',', $trustedProxies)));
-            if (!empty($proxies)) {
-                $middleware->trustProxies(at: $proxies);
-            }
-        }
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
