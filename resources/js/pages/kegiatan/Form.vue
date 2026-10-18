@@ -95,6 +95,12 @@ const handleFotoChange = (event: Event) => {
     }
 };
 
+// Fallback jika file gambar tidak ditemukan
+const handleImageError = (event: Event) => {
+    const target = event.target as HTMLImageElement;
+    target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23888888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+};
+
 // submit function
 const submit = () => {
     switch (props.mode) {
@@ -264,12 +270,16 @@ const submit = () => {
                         <AspectRatio :ratio="16 / 11" class="relative">
                             <img v-if="fotoPreview !== null" :src="fotoPreview" alt="Foto Preview"
                                 class="aspect-video h-full w-full border rounded-md object-contain" />
-                            <img v-else :src="kegiatanData?.foto
-                                ? `/storage/${kegiatanData.foto}`
-                                : '/images/blank-photo-icon.jpg'" alt="Foto" :class="cn(
+                            <img v-else-if="kegiatanData?.foto" :src="`/storage/${kegiatanData.foto}`"
+                                @error="handleImageError"
+                                alt="Foto" :class="cn(
                                         form.errors.foto ? 'border-red-500' : '',
                                         'aspect-video h-full w-full border rounded-md object-contain'
                                     )" />
+                            <div v-else class="aspect-video h-full w-full border border-dashed rounded-md flex flex-col items-center justify-center gap-2 bg-muted/20 text-muted-foreground">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                <span class="text-xs">Belum ada foto</span>
+                            </div>
                         </AspectRatio>
                     </div>
                 </div>

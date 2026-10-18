@@ -29,6 +29,9 @@ export const columns: ColumnDef<Kegiatan>[] = [
                     src: foto ? `/storage/${foto}` : '/images/blank-photo-icon.jpg',
                     alt: 'Foto Kegiatan',
                     class: 'h-10 w-10 rounded-md object-cover',
+                    onError: (e: Event) => {
+                        (e.target as HTMLImageElement).src = '/images/blank-photo-icon.jpg';
+                    }
                 }),
             ])
         }
