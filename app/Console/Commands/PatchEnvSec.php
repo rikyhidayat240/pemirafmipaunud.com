@@ -50,8 +50,8 @@ class PatchEnvSec extends Command
         $this->info('Production .env security settings patched successfully!');
 
         // Show result
-        $this->line('SESSION_ENCRYPT  : ' . env('SESSION_ENCRYPT', 'not set'));
-        $this->line('APP_DEBUG        : ' . (env('APP_DEBUG') ? 'true' : 'false'));
+        $this->line('SESSION_ENCRYPT  : ' . (config('session.encrypt') ? 'true' : 'false'));
+        $this->line('APP_DEBUG        : ' . (config('app.debug') ? 'true' : 'false'));
 
         return 0;
     }

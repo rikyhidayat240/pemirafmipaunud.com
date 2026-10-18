@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kegiatan;
 use App\Models\ProgramStudi;
+use App\Services\AuditLogService;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -94,7 +95,7 @@ class KegiatanController extends Controller
             }
 
             // Create new kegiatan record
-            Kegiatan::create([
+            $kegiatan = Kegiatan::create([
                 'nama' => $validatedData['nama'],
                 'ruang_lingkup' => $validatedData['ruang_lingkup'],
                 'tahun' => $validatedData['tahun'],
@@ -102,6 +103,14 @@ class KegiatanController extends Controller
                 'waktu_selesai' => $validatedData['waktu_selesai'],
                 'id_program_studi' => $validatedData['id_program_studi'],
                 'foto' => $fotoPath,
+            ]);
+
+            AuditLogService::log('kegiatan.create', 'kegiatan', (string) $kegiatan->id, [
+                'nama'          => $kegiatan->nama,
+                'ruang_lingkup' => $kegiatan->ruang_lingkup,
+                'tahun'         => $kegiatan->tahun,
+                'waktu_mulai'   => (string) $kegiatan->waktu_mulai,
+                'waktu_selesai' => (string) $kegiatan->waktu_selesai,
             ]);
 
             // Redirect back with success message
@@ -239,6 +248,14 @@ class KegiatanController extends Controller
                 'foto' => $fotoPath,
             ]);
 
+            AuditLogService::log('kegiatan.update', 'kegiatan', (string) $kegiatan->id, [
+                'nama'          => $kegiatan->nama,
+                'ruang_lingkup' => $kegiatan->ruang_lingkup,
+                'tahun'         => $kegiatan->tahun,
+                'waktu_mulai'   => (string) $kegiatan->waktu_mulai,
+                'waktu_selesai' => (string) $kegiatan->waktu_selesai,
+            ]);
+
             // Redirect with success message
             return redirect()->back()->with('success', 'Data kegiatan berhasil diperbarui.');
         } catch (\Exception $e) {
@@ -262,6 +279,11 @@ class KegiatanController extends Controller
 
             // Delete kegiatan
             $kegiatan->delete();
+
+            AuditLogService::log('kegiatan.delete', 'kegiatan', (string) $id, [
+                'nama' => $kegiatan->nama,
+            ]);
+
             return redirect()->back()->with('success', 'Data kegiatan berhasil dihapus.');
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'Integrity constraint violation')) {

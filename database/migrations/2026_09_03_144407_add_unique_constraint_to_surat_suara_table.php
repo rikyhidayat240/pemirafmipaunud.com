@@ -8,8 +8,8 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * SEC-03: Prevent double-vote at database level via unique constraint.
-     * PERF-03: Add indexes for frequently queried columns.
+     * Prevent double-vote at database level via unique constraint
+     * and add indexes for frequently queried columns.
      */
     public function up(): void
     {

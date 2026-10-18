@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Mail\MahasiswaCredentials;
 use App\Models\ProgramStudi;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -21,17 +24,23 @@ class MahasiswaController extends Controller
      */
     public function syncMahasiswa(int $year)
     {
-        // SEC-07: Validate year range
+        set_time_limit(0);
+        ignore_user_abort(true);
+
         if ($year < 2020 || $year > (int) date('Y') + 1) {
             abort(422, 'Tahun tidak valid.');
         }
 
         // Get current users and users from spreadsheet
-        $currentUsers = User::all();
+        $currentUsers = User::all()->keyBy('nim');
         $users = User::getMahasiswaFromSheet($year);
 
         $newCount = 0;
         $updatedCount = 0;
+        $newUsers = [];
+
+        // Pre-compute initial placeholder hash once so creating hundreds of accounts finishes in <2s
+        $initialPasswordHash = Hash::make($this->generatePassword());
 
         // Sync users
         try {
@@ -40,7 +49,7 @@ class MahasiswaController extends Controller
                 $fillableData = Arr::only($userArray, ['nim', 'nama', 'id_program_studi', 'angkatan']);
                 $status = $userArray['status'] ?? 'aktif';
 
-                $currentUser = $currentUsers->firstWhere('nim', $userArray['nim']);
+                $currentUser = $currentUsers->get($userArray['nim']);
                 if ($currentUser) {
                     // Update existing user (preserve email/password if already set)
                     $currentUser->fill($fillableData);
@@ -48,34 +57,67 @@ class MahasiswaController extends Controller
                     $currentUser->save();
                     $updatedCount++;
                 } else {
-                    // Create new user with auto-generated password
-                    $plainPassword = $this->generatePassword();
                     $nim = $userArray['nim'];
                     $email = $nim . '@student.unud.ac.id';
 
                     $newUser = new User();
                     $newUser->fill(array_merge($fillableData, [
-                        'email'             => $email,
-                        'password'          => Hash::make($plainPassword),
-                        'email_verified_at' => now(),
-                        'credentials_sent_at' => null, // will be set after email is sent
+                        'email'               => $email,
+                        'password'            => $initialPasswordHash,
+                        'email_verified_at'   => now(),
+                        'credentials_sent_at' => null,
                     ]));
                     $newUser->status = $status;
                     $newUser->is_admin = false;
                     $newUser->save();
 
-                    // Try to send credential email (non-blocking)
-                    try {
-                        Mail::to($email)->send(new MahasiswaCredentials($newUser, $plainPassword));
-                        $newUser->update(['credentials_sent_at' => now()]);
-                    } catch (\Exception $mailEx) {
-                        Log::warning('Credential email failed for nim=' . $nim . ': ' . $mailEx->getMessage());
-                        // Don't abort — account is created, email can be re-sent via artisan command
-                    }
-
+                    $newUsers[] = $newUser;
                     $newCount++;
                 }
             }
+
+            AuditLogService::log('mahasiswa.sync', 'user', (string) $year, [
+                'year'          => $year,
+                'new_count'     => $newCount,
+                'updated_count' => $updatedCount,
+            ]);
+
+            if ($newCount > 0 && $newCount <= 20) {
+                foreach ($newUsers as $newUser) {
+                    try {
+                        $plainPassword = $this->generatePassword();
+                        Mail::to($newUser->email)->send(new MahasiswaCredentials($newUser, $plainPassword));
+                        $newUser->update([
+                            'password'            => Hash::make($plainPassword),
+                            'credentials_sent_at' => now(),
+                        ]);
+                    } catch (\Exception $mailEx) {
+                        Log::warning('Credential email failed for nim=' . $newUser->nim . ': ' . $mailEx->getMessage());
+                    }
+                }
+            } elseif ($newCount > 20) {
+                defer(function () use ($newUsers) {
+                    set_time_limit(0);
+                    ignore_user_abort(true);
+
+                    foreach ($newUsers as $newUser) {
+                        try {
+                            $plainPassword = $this->generatePassword();
+                            Mail::to($newUser->email)->send(new MahasiswaCredentials($newUser, $plainPassword));
+                            $newUser->update([
+                                'password'            => Hash::make($plainPassword),
+                                'credentials_sent_at' => now(),
+                            ]);
+                        } catch (\Exception $mailEx) {
+                            Log::warning('Credential email failed for nim=' . $newUser->nim . ': ' . $mailEx->getMessage());
+                        }
+                    }
+                });
+
+                return redirect()->back()->with('success',
+                    "Sinkronisasi selesai. {$newCount} akun baru dibuat, {$updatedCount} data diperbarui. Pengiriman email kredensial sedang berjalan otomatis di latar belakang.");
+            }
+
             return redirect()->back()->with('success',
                 'Sinkronisasi selesai. ' . $newCount . ' akun baru dibuat, ' . $updatedCount . ' data diperbarui.');
         } catch (\Exception $e) {
@@ -98,13 +140,18 @@ class MahasiswaController extends Controller
         try {
             // Generate new password
             $plainPassword = $this->generatePassword();
-            $mahasiswa->update([
-                'password'            => Hash::make($plainPassword),
-                'email_verified_at'   => now(),
-            ]);
 
             Mail::to($mahasiswa->email)->send(new MahasiswaCredentials($mahasiswa, $plainPassword));
-            $mahasiswa->update(['credentials_sent_at' => now()]);
+
+            $mahasiswa->update([
+                'password'            => Hash::make($plainPassword),
+                'email_verified_at'   => $mahasiswa->email_verified_at ?? now(),
+                'credentials_sent_at' => now(),
+            ]);
+
+            AuditLogService::log('mahasiswa.send_credentials', 'user', $mahasiswa->nim, [
+                'nim' => $mahasiswa->nim,
+            ]);
 
             return back()->with('success', 'Credentials berhasil dikirim ke ' . $mahasiswa->email);
         } catch (\Exception $e) {
@@ -118,48 +165,154 @@ class MahasiswaController extends Controller
      */
     public function sendBulkCredentials(Request $request)
     {
-        $onlyUnsent = $request->boolean('only_unsent', false);
+        set_time_limit(0);
+        ignore_user_abort(true);
 
-        $query = User::where('is_admin', false)
-            ->whereNotNull('email')
-            ->where('email', '!=', '');
-
-        if ($onlyUnsent) {
-            $query->whereNull('credentials_sent_at');
+        $lock = Cache::lock('pemira_bulk_email_lock', 3600);
+        if (! $lock->get()) {
+            return back()->with('error', 'Pengiriman email massal sedang berjalan di latar belakang. Silakan refresh halaman secara berkala untuk memantau progres.');
         }
 
-        $mahasiswaList = $query->get();
+        $isDeferred = false;
 
-        if ($mahasiswaList->isEmpty()) {
-            return back()->with('error', 'Tidak ada mahasiswa yang memenuhi syarat pengiriman email.');
+        try {
+            $onlyUnsent = $request->boolean('only_unsent', false);
+
+            $query = User::where('is_admin', false)
+                ->whereNotNull('email')
+                ->where('email', '!=', '');
+
+            if ($onlyUnsent) {
+                $query->whereNull('credentials_sent_at');
+            }
+
+            $mahasiswaList = $query->get();
+
+            if ($mahasiswaList->isEmpty()) {
+                return back()->with('error', 'Tidak ada mahasiswa yang memenuhi syarat pengiriman email.');
+            }
+
+            $total = $mahasiswaList->count();
+
+            AuditLogService::log('mahasiswa.send_bulk_credentials', 'user', null, [
+                'total'       => $total,
+                'only_unsent' => $onlyUnsent,
+            ]);
+
+            $throttleDelayMs = (int) config('services.ses.throttle_delay_ms', 100);
+            $maxRetries      = (int) config('services.ses.max_retries', 3);
+
+            // For large batches (> 20), execute in background after sending HTTP response to avoid 504 Gateway Timeout
+            if ($total > 20) {
+                $isDeferred = true;
+
+                defer(function () use ($mahasiswaList, $lock, $throttleDelayMs, $maxRetries) {
+                    set_time_limit(0);
+                    ignore_user_abort(true);
+
+                    try {
+                        foreach ($mahasiswaList as $index => $mahasiswa) {
+                            if ($index > 0 && $throttleDelayMs > 0) {
+                                usleep($throttleDelayMs * 1000);
+                            }
+
+                            $this->sendCredentialWithRetry($mahasiswa, $maxRetries);
+                        }
+                    } finally {
+                        optional($lock)->release();
+                    }
+                });
+
+                return back()->with('success', "Pengiriman massal ke {$total} mahasiswa sedang berjalan di latar belakang! Silakan refresh halaman secara berkala untuk memantau status Terkirim.");
+            }
+
+            $sent = 0;
+            $failed = 0;
+
+            foreach ($mahasiswaList as $index => $mahasiswa) {
+                if ($index > 0 && $throttleDelayMs > 0) {
+                    usleep($throttleDelayMs * 1000);
+                }
+
+                if ($this->sendCredentialWithRetry($mahasiswa, $maxRetries)) {
+                    $sent++;
+                } else {
+                    $failed++;
+                }
+            }
+
+            $msg = "Pengiriman bulk selesai: {$sent} email berhasil terkirim.";
+            if ($failed > 0) {
+                $msg .= " ({$failed} gagal).";
+            }
+
+            return back()->with($failed > 0 && $sent === 0 ? 'error' : 'success', $msg);
+        } finally {
+            if (! $isDeferred) {
+                optional($lock)->release();
+            }
         }
+    }
 
-        $sent = 0;
-        $failed = 0;
+    /**
+     * Send credential email to a student with exponential backoff retry for throttling errors.
+     */
+    public function sendCredentialWithRetry(User $mahasiswa, int $maxRetries = 3): bool
+    {
+        $attempt = 0;
+        $backoffBaseMs = (int) config('services.ses.backoff_base_ms', app()->environment('testing') ? 1 : 1000);
 
-        foreach ($mahasiswaList as $mahasiswa) {
+        while ($attempt < $maxRetries) {
+            $attempt++;
+
             try {
                 $plainPassword = $this->generatePassword();
-                $mahasiswa->update([
-                    'password'          => Hash::make($plainPassword),
-                    'email_verified_at' => now(),
-                ]);
 
                 Mail::to($mahasiswa->email)->send(new MahasiswaCredentials($mahasiswa, $plainPassword));
-                $mahasiswa->update(['credentials_sent_at' => now()]);
-                $sent++;
-            } catch (\Exception $e) {
-                $failed++;
-                Log::warning("Bulk credential email failed for nim={$mahasiswa->nim}: " . $e->getMessage());
+
+                $mahasiswa->update([
+                    'password'            => Hash::make($plainPassword),
+                    'email_verified_at'   => $mahasiswa->email_verified_at ?? now(),
+                    'credentials_sent_at' => now(),
+                ]);
+
+                return true;
+            } catch (\Throwable $e) {
+                if ($this->isThrottlingException($e) && $attempt < $maxRetries) {
+                    $sleepMs = $backoffBaseMs * (int) pow(2, $attempt - 1);
+                    Log::warning("Email throttling encountered for nim={$mahasiswa->nim} (attempt {$attempt}/{$maxRetries}). Retrying in {$sleepMs}ms: {$e->getMessage()}");
+                    usleep($sleepMs * 1000);
+                    continue;
+                }
+
+                Log::warning("Credential email failed for nim={$mahasiswa->nim}: " . $e->getMessage());
+                return false;
             }
         }
 
-        $msg = "Pengiriman bulk selesai: {$sent} email berhasil terkirim.";
-        if ($failed > 0) {
-            $msg .= " ({$failed} gagal).";
+        return false;
+    }
+
+    /**
+     * Determine if an exception represents an email rate limit / throttling error.
+     * Matches only temporary rate-based errors (e.g. 454 Maximum sending rate exceeded, 429 Too Many Requests).
+     * Excludes non-transient quota limits such as Daily message quota exceeded.
+     */
+    public function isThrottlingException(\Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        // Do not retry on daily quota exhaustion
+        if (str_contains($message, 'daily') || str_contains($message, 'quota')) {
+            return false;
         }
 
-        return back()->with($failed > 0 && $sent === 0 ? 'error' : 'success', $msg);
+        return str_contains($message, 'maximum sending rate exceeded')
+            || str_contains($message, 'rate exceeded')
+            || str_contains($message, 'too many requests')
+            || str_contains($message, '429')
+            || (str_contains($message, '454') && (str_contains($message, 'throttl') || str_contains($message, 'rate')))
+            || str_contains($message, 'throttling');
     }
 
     /**
@@ -258,6 +411,13 @@ class MahasiswaController extends Controller
             $newUser->is_admin = false;
             $newUser->save();
 
+            AuditLogService::log('mahasiswa.create', 'user', $newUser->nim, [
+                'nim'              => $newUser->nim,
+                'nama'             => $newUser->nama,
+                'id_program_studi' => $newUser->id_program_studi,
+                'angkatan'         => $newUser->angkatan,
+            ]);
+
             // Kirim email credentials
             try {
                 Mail::to($studentEmail)->send(new MahasiswaCredentials($newUser, $plainPassword));
@@ -310,12 +470,14 @@ class MahasiswaController extends Controller
                 return redirect()->back()->with('error', 'NIM sudah terdaftar oleh mahasiswa lain.');
             }
 
-            $existingEmail = User::where('email', $validatedData['email'])
-                ->whereNot('nim', $nim)
-                ->whereNotNull('email')
-                ->first();
-            if ($existingEmail) {
-                return redirect()->back()->with('error', 'Email sudah terdaftar oleh mahasiswa lain.');
+            if (!empty($validatedData['email'])) {
+                $existingEmail = User::where('email', $validatedData['email'])
+                    ->whereNot('nim', $nim)
+                    ->whereNotNull('email')
+                    ->first();
+                if ($existingEmail) {
+                    return redirect()->back()->with('error', 'Email sudah terdaftar oleh mahasiswa lain.');
+                }
             }
 
             // Handle avatar upload
@@ -349,11 +511,27 @@ class MahasiswaController extends Controller
 
             $mahasiswa->update($updateData);
 
+            AuditLogService::log('mahasiswa.update', 'user', $mahasiswa->nim, [
+                'nim'              => $mahasiswa->nim,
+                'nama'             => $mahasiswa->nama,
+                'id_program_studi' => $mahasiswa->id_program_studi,
+                'angkatan'         => $mahasiswa->angkatan,
+            ]);
+
             return redirect()->back()->with('success', 'Data mahasiswa berhasil diperbarui.');
         } catch (\Exception $e) {
             Log::error('Update mahasiswa error nim=' . $nim . ': ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data mahasiswa. Silakan coba lagi.');
         }
+    }
+
+    /**
+     * Check whether the student has protected vote or candidate records.
+     */
+    protected function hasProtectedRecords(string $nim): bool
+    {
+        return DB::table('surat_suara')->where('nim', $nim)->exists()
+            || DB::table('mahasiswa_kandidat')->where('nim', $nim)->exists();
     }
 
     /**
@@ -365,13 +543,24 @@ class MahasiswaController extends Controller
             // Find mahasiswa
             $mahasiswa = User::where('nim', $nim)->firstOrFail();
 
-            // Delete avatar if exists
-            if ($mahasiswa->avatar && Storage::disk('public')->exists($mahasiswa->avatar)) {
-                Storage::disk('public')->delete($mahasiswa->avatar);
+            if ($this->hasProtectedRecords($mahasiswa->nim)) {
+                return redirect()->back()->with('error', 'Data mahasiswa tidak dapat dihapus karena terkait dengan data voting.');
             }
 
-            // Delete mahasiswa
+            $avatarPath = $mahasiswa->avatar;
+
+            // Delete mahasiswa first so avatar is not lost if DB rejects deletion
             $mahasiswa->delete();
+
+            // Delete avatar if exists
+            if ($avatarPath && Storage::disk('public')->exists($avatarPath)) {
+                Storage::disk('public')->delete($avatarPath);
+            }
+
+            AuditLogService::log('mahasiswa.delete', 'user', $nim, [
+                'nim' => $nim,
+            ]);
+
             return redirect()->back()->with('success', 'Data mahasiswa berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Delete mahasiswa error nim=' . $nim . ': ' . $e->getMessage());
@@ -380,5 +569,63 @@ class MahasiswaController extends Controller
             }
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data mahasiswa. Silakan coba lagi.');
         }
+    }
+
+    /**
+     * Bulk remove students from storage while skipping those with vote/candidate records.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $validated = $request->validate([
+            'nims'   => 'required|array|min:1',
+            'nims.*' => 'required|string|max:15',
+        ]);
+
+        $targetUsers = User::whereIn('nim', array_unique($validated['nims']))
+            ->where('is_admin', false)
+            ->get();
+
+        $deletedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($targetUsers as $mahasiswa) {
+            if ($this->hasProtectedRecords($mahasiswa->nim)) {
+                $skippedCount++;
+                continue;
+            }
+
+            try {
+                $avatarPath = $mahasiswa->avatar;
+                $mahasiswa->delete();
+
+                if ($avatarPath && Storage::disk('public')->exists($avatarPath)) {
+                    Storage::disk('public')->delete($avatarPath);
+                }
+
+                $deletedCount++;
+            } catch (\Exception $e) {
+                Log::warning('Bulk delete skipped nim=' . $mahasiswa->nim . ': ' . $e->getMessage());
+                $skippedCount++;
+            }
+        }
+
+        AuditLogService::log('mahasiswa.bulk_delete', 'user', null, [
+            'deleted_count' => $deletedCount,
+            'skipped_count' => $skippedCount,
+        ]);
+
+        if ($deletedCount === 0 && $skippedCount > 0) {
+            return redirect()->back()->with(
+                'error',
+                "Tidak ada mahasiswa yang dihapus. {$skippedCount} mahasiswa dilewati karena terkait dengan data voting."
+            );
+        }
+
+        $message = "{$deletedCount} data mahasiswa berhasil dihapus.";
+        if ($skippedCount > 0) {
+            $message .= " {$skippedCount} mahasiswa dilewati karena terkait dengan data voting.";
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 }

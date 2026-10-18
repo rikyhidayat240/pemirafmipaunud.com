@@ -13,7 +13,6 @@ class BerandaController extends Controller
 {
     private function getKegiatan()
     {
-        // PERF-01: Use auth user directly — no need to re-query the database
         $user = auth('web')->user();
         if ($user->is_admin) return Kegiatan::all();
         

@@ -19,7 +19,6 @@ class SuratSuaraController extends Controller
      */
     public function show()
     {
-        // PERF-01: Use auth()->user() directly — already loaded by Laravel, no DB re-query needed
         $user = auth('web')->user();
         // Eager-load kegiatan for vote status checking
         $user->load('kegiatan');
@@ -114,7 +113,6 @@ class SuratSuaraController extends Controller
                     ->exists() : false;
 
                 if ($alreadyVotedBem || $alreadyVotedHima) {
-                    // SECURITY: Log double-vote attempt (NIM only, no candidate choices)
                     Log::warning('[SECURITY] Double-vote attempt detected in Pemira', [
                         'nim'               => $user->nim,
                         'already_voted_bem' => $alreadyVotedBem,
@@ -129,13 +127,11 @@ class SuratSuaraController extends Controller
                 $ttdPath = null;
                 if ($request->ttd) {
                     $image = $request->ttd;
-                    // SECURITY: Strict whitelist of allowed image types for TTD
                     $allowedTypes = ['png', 'jpeg', 'jpg'];
                     if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
                         $image = substr($image, strpos($image, ',') + 1);
                         $detectedType = strtolower($type[1]);
 
-                        // SECURITY: Reject if type not in whitelist
                         if (!in_array($detectedType, $allowedTypes, true)) {
                             Log::warning('[SECURITY] Rejected invalid TTD image type', [
                                 'nim'  => $user->nim,
@@ -150,32 +146,42 @@ class SuratSuaraController extends Controller
                             return back()->with('alert', ['type' => 'error', 'title' => 'Error', 'message' => 'Gagal memproses tanda tangan.']);
                         }
                         
-                        // SECURITY: Use random filename — never trust client-supplied data for filename
-                        $filename = $user->nim . '_' . time() . '_' . Str::random(16) . '.' . $detectedType;
+                        $filename = $user->nim . '_' . Str::random(24) . '.' . $detectedType;
                         Storage::disk('public')->put('ttd-mahasiswa/' . $filename, $image);
                         $ttdPath = 'ttd-mahasiswa/' . $filename;
                     }
                 }
 
-                // Mark user as voted in pivot table
+                // Mark user as voted in pivot table with coarsened timestamp (rounded down to hour)
+                $coarsenedTimestamp = now()->startOfHour();
                 $syncData = [];
                 if ($kandidatBem) {
-                    $syncData[$kandidatBem->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+                    $syncData[$kandidatBem->id_kegiatan] = [
+                        'has_vote'   => true,
+                        'ttd'        => $ttdPath,
+                        'created_at' => $coarsenedTimestamp,
+                        'updated_at' => $coarsenedTimestamp,
+                    ];
                 }
                 if ($kandidatHima) {
-                    $syncData[$kandidatHima->id_kegiatan] = ['has_vote' => true, 'ttd' => $ttdPath];
+                    $syncData[$kandidatHima->id_kegiatan] = [
+                        'has_vote'   => true,
+                        'ttd'        => $ttdPath,
+                        'created_at' => $coarsenedTimestamp,
+                        'updated_at' => $coarsenedTimestamp,
+                    ];
                 }
                 
                 if (!empty($syncData)) {
                     $user->kegiatan()->syncWithoutDetaching($syncData);
                 }
 
-                // Increment candidate votes atomically without row lock on kandidat
+                // Increment candidate votes atomically via query builder without touching updated_at
                 if ($kandidatBem) {
-                    $kandidatBem->increment('jumlah_suara');
+                    DB::table('kandidat')->where('id', $kandidatBem->id)->increment('jumlah_suara');
                 }
                 if ($kandidatHima) {
-                    $kandidatHima->increment('jumlah_suara');
+                    DB::table('kandidat')->where('id', $kandidatHima->id)->increment('jumlah_suara');
                 }
 
                 Log::info('[VOTE] Vote cast successfully in Pemira', [

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\KandidatController;
 use App\Http\Controllers\KegiatanController;
@@ -22,6 +23,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('admin')->group(function () {
+        Route::match(['post', 'delete'], 'users/bulk-delete', [MahasiswaController::class, 'bulkDestroy'])
+            ->name('users.bulk-destroy');
+
         Route::resource('users', MahasiswaController::class)
             ->only(['index', 'store', 'update', 'destroy']);
     
@@ -43,6 +47,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
         Route::resource('candidates', KandidatController::class)
             ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::get('audit-logs', [AuditLogController::class, 'index'])
+            ->name('audit-logs.index');
+
+        if (app()->environment() !== 'production') {
+            Route::get('staging/proxy-diagnostic', function (\Illuminate\Http\Request $request) {
+                if (app()->environment('production')) {
+                    abort(404);
+                }
+
+                return response()->json([
+                    'client_ip'         => $request->ip(),
+                    'scheme'            => $request->getScheme(),
+                    'is_secure'         => $request->isSecure(),
+                    'remote_addr'       => $request->server('REMOTE_ADDR'),
+                    'x_forwarded_for'   => $request->header('x-forwarded-for'),
+                    'x_forwarded_proto' => $request->header('x-forwarded-proto'),
+                    'x_forwarded_host'  => $request->header('x-forwarded-host'),
+                    'x_forwarded_port'  => $request->header('x-forwarded-port'),
+                ]);
+            })->name('staging.proxy-diagnostic');
+        }
     });
 });
 require __DIR__ . '/settings.php';

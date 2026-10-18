@@ -30,10 +30,9 @@ class UserFactory extends Factory
             'id_program_studi' => fake()->numberBetween(1, 6),
             'nama' => fake()->name(),
             'angkatan' => fake()->numberBetween(2020, 2025),
-            'email' => null,
-            'email_verified_at' => null,
-            // 'password' => static::$password ??= Hash::make('musmafmipa'),
-            'password' => null,
+            'email' => fake()->unique()->safeEmail(),
+            'email_verified_at' => now(),
+            'password' => static::$password ??= Hash::make('password'),
             'status' => 'aktif',
             'is_admin' => false,
             'remember_token' => Str::random(10),
@@ -49,4 +48,15 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Indicate that the model should be an admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+        ]);
+    }
 }
+

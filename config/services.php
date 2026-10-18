@@ -22,6 +22,8 @@ return [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+        'throttle_delay_ms' => (int) env('AWS_SES_THROTTLE_DELAY_MS', env('MAIL_THROTTLE_DELAY_MS', 100)),
+        'max_retries' => (int) env('AWS_SES_MAX_RETRIES', env('MAIL_MAX_RETRIES', 3)),
     ],
 
     'resend' => [

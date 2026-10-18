@@ -31,7 +31,7 @@ class StoreVoteRequest extends FormRequest
                 return;
             }
 
-            // a) User bukan admin dan berstatus aktif
+            // Pastikan pemilih bukan admin dan berstatus aktif
             if ($user->is_admin) {
                 $validator->errors()->add('user', 'Admin tidak berhak melakukan pemilihan.');
                 return;
@@ -51,7 +51,7 @@ class StoreVoteRequest extends FormRequest
                 return;
             }
 
-            // e) Kandidat BEM dan HIMA tidak boleh sama (cast ke integer agar "5" vs "05" tertangkap)
+            // Kandidat BEM dan HIMA tidak boleh sama
             if ($bemInput !== null && $himaInput !== null && (int) $bemInput === (int) $himaInput) {
                 $validator->errors()->add('id_kandidat_hima', 'Kandidat BEM dan HIMA tidak boleh sama.');
                 return;
@@ -67,13 +67,11 @@ class StoreVoteRequest extends FormRequest
 
                 $kegiatanBem = $kandidatBem->kegiatan;
 
-                // d) BEM berlingkup fakultas
                 if ($kegiatanBem->ruang_lingkup !== 'fakultas') {
                     $validator->errors()->add('id_kandidat_bem', 'Kandidat yang dipilih bukan untuk pemilihan tingkat fakultas (BEM).');
                     return;
                 }
 
-                // b) Jadwal kegiatan
                 if (now()->isBefore($kegiatanBem->waktu_mulai)) {
                     $validator->errors()->add('id_kandidat_bem', 'Pemilihan BEM belum dimulai.');
                     return;
@@ -94,7 +92,6 @@ class StoreVoteRequest extends FormRequest
 
                 $kegiatanHima = $kandidatHima->kegiatan;
 
-                // d) HIMA berlingkup program studi & sesuai id_program_studi pemilih (cast integer)
                 if ($kegiatanHima->ruang_lingkup !== 'program studi') {
                     $validator->errors()->add('id_kandidat_hima', 'Kandidat yang dipilih bukan untuk pemilihan tingkat program studi (HIMA).');
                     return;
@@ -105,7 +102,6 @@ class StoreVoteRequest extends FormRequest
                     return;
                 }
 
-                // b) Jadwal kegiatan
                 if (now()->isBefore($kegiatanHima->waktu_mulai)) {
                     $validator->errors()->add('id_kandidat_hima', 'Pemilihan HIMA belum dimulai.');
                     return;
