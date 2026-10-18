@@ -11,20 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('audit_logs', function (Blueprint $table) {
-            $table->id();
-            $table->string('admin_nim', 15)->nullable();
-            $table->string('aksi', 100);
-            $table->string('target_type', 100)->nullable();
-            $table->string('target_id', 100)->nullable();
-            $table->string('ip', 45)->nullable();
-            $table->string('user_agent', 255)->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamps();
+        if (!Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function (Blueprint $table) {
+                $table->id();
+                $table->string('admin_nim', 15)->nullable();
+                $table->string('aksi', 100);
+                $table->string('target_type', 100)->nullable();
+                $table->string('target_id', 100)->nullable();
+                $table->string('ip', 45)->nullable();
+                $table->string('user_agent', 255)->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamps();
 
-            $table->index(['admin_nim', 'created_at']);
-            $table->index(['aksi', 'created_at']);
-        });
+                $table->index(['admin_nim', 'created_at']);
+                $table->index(['aksi', 'created_at']);
+            });
+        }
     }
 
     /**
