@@ -27,6 +27,10 @@ const candidateLink = (nama: string) => {
 const filteredKegiatan = computed(() => {
     if (!auth.value.user) return [];
 
+    if (auth.value.user.is_admin) {
+        return props.kegiatan;
+    }
+
     return props.kegiatan.filter(item => {
         if (item.ruang_lingkup === 'fakultas') {
             return true;

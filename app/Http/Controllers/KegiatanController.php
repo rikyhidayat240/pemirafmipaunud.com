@@ -19,17 +19,16 @@ class KegiatanController extends Controller
      */
     public function index()
     {
-        // Fetch kegiatan data with related program studi and count mahasiswa yang sudah vote
+        // Fetch kegiatan data with related program studi and count mahasiswa
         $kegiatan = Kegiatan::with('programStudi')
             ->withCount([
-                'mahasiswa as total_mahasiswa' => function ($query) {
-                    $query->where('has_vote', true);
-                },
+                'mahasiswa as total_mahasiswa',
                 'mahasiswa as jumlah_pemilih' => function ($query) {
                     $query->where('has_vote', true);
                 }
             ])
-            ->where('tahun', now()->year)
+            ->orderBy('tahun', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get();
             
         $programStudi = ProgramStudi::all();
