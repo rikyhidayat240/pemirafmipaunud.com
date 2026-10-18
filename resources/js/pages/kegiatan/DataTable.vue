@@ -44,6 +44,7 @@ const activeFilters = computed(() => {
 const table = useVueTable({
     get data() { return props.data },
     get columns() { return props.columns },
+    getRowId: (row) => String(row.id),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

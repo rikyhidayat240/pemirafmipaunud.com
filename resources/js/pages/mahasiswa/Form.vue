@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { cn } from '@/lib/utils';
 import { useForm } from '@inertiajs/vue3';
 import { ProgramStudi, User } from '@/types';
@@ -36,6 +36,18 @@ const form = useForm({
 
 // Avatar preview state
 const avatarPreview = ref<string | null>(null);
+
+watch(() => props.mahasiswaData, (newData) => {
+    if (newData) {
+        form.nim = newData.nim || '';
+        form.nama = newData.nama || '';
+        form.email = newData.email || '';
+        form.id_program_studi = newData.id_program_studi || 1;
+        form.angkatan = newData.angkatan || new Date().getFullYear();
+        form.avatar = null;
+        avatarPreview.value = null;
+    }
+}, { deep: true });
 
 // Handle avatar change
 const handleAvatarChange = (event: Event) => {

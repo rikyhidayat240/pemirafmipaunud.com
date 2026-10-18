@@ -423,11 +423,11 @@ class MahasiswaController extends Controller
                 Mail::to($studentEmail)->send(new MahasiswaCredentials($newUser, $plainPassword));
                 $newUser->update(['credentials_sent_at' => now()]);
                 return back()->with('success', 'Akun mahasiswa berhasil dibuat dan credentials telah dikirim ke ' . $studentEmail);
-            } catch (\Exception $mailEx) {
+            } catch (\Throwable $mailEx) {
                 Log::warning('Credential email failed for nim=' . $validatedData['nim'] . ': ' . $mailEx->getMessage());
                 return back()->with('success', 'Akun mahasiswa berhasil dibuat. Email credentials gagal terkirim — gunakan tombol "Kirim Ulang" di tabel untuk mengirim ulang.');
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Create mahasiswa error: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat membuat data mahasiswa. Silakan coba lagi.');
         }
@@ -462,6 +462,11 @@ class MahasiswaController extends Controller
             // Find the mahasiswa to update
             $mahasiswa = User::where('nim', $nim)->firstOrFail();
 
+            // Prevent changing NIM if student already has vote or candidate records
+            if ($validatedData['nim'] !== $nim && $this->hasProtectedRecords($nim)) {
+                return redirect()->back()->with('error', 'NIM mahasiswa tidak dapat diubah karena sudah terkait dengan data voting atau kandidat.');
+            }
+
             // Check if there is any data with the same NIM and email (excluding current mahasiswa)
             $existingNim = User::where('nim', $validatedData['nim'])
                 ->whereNot('nim', $nim)
@@ -491,6 +496,12 @@ class MahasiswaController extends Controller
                 // Store new avatar
                 $avatarFile = $request->file('avatar');
                 $avatarName = $avatarFile->hashName();
+
+                $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
+                if (!file_exists($avatarDestination)) {
+                    mkdir($avatarDestination, 0755, true);
+                }
+
                 Storage::disk('public')->putFileAs('foto-mahasiswa', $avatarFile, $avatarName);
                 $avatarPath = 'foto-mahasiswa/' . $avatarName;
             }
@@ -519,7 +530,7 @@ class MahasiswaController extends Controller
             ]);
 
             return redirect()->back()->with('success', 'Data mahasiswa berhasil diperbarui.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Update mahasiswa error nim=' . $nim . ': ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data mahasiswa. Silakan coba lagi.');
         }

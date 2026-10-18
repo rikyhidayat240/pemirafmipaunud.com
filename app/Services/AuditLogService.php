@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AuditLogService
@@ -40,25 +41,30 @@ class AuditLogService
         ?string $targetType = null,
         ?string $targetId = null,
         array $metadata = []
-    ): AuditLog {
-        $admin = auth('web')->user();
-        $adminNim = $admin ? $admin->nim : null;
+    ): ?AuditLog {
+        try {
+            $admin = auth('web')->user();
+            $adminNim = $admin ? $admin->nim : null;
 
-        $request = request();
-        $ip = $request ? $request->ip() : null;
-        $userAgent = $request ? Str::limit((string) $request->userAgent(), 250, '') : null;
+            $request = request();
+            $ip = $request ? $request->ip() : null;
+            $userAgent = $request ? Str::limit((string) $request->userAgent(), 250, '') : null;
 
-        $safeMetadata = self::sanitizeMetadata($metadata);
+            $safeMetadata = self::sanitizeMetadata($metadata);
 
-        return AuditLog::create([
-            'admin_nim'   => $adminNim,
-            'aksi'        => $aksi,
-            'target_type' => $targetType,
-            'target_id'   => $targetId ? (string) $targetId : null,
-            'ip'          => $ip,
-            'user_agent'  => $userAgent,
-            'metadata'    => !empty($safeMetadata) ? $safeMetadata : null,
-        ]);
+            return AuditLog::create([
+                'admin_nim'   => $adminNim,
+                'aksi'        => $aksi,
+                'target_type' => $targetType,
+                'target_id'   => $targetId ? (string) $targetId : null,
+                'ip'          => $ip,
+                'user_agent'  => $userAgent,
+                'metadata'    => !empty($safeMetadata) ? $safeMetadata : null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('AuditLog write failed for aksi=' . $aksi . ': ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
