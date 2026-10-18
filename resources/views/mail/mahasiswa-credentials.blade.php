@@ -226,7 +226,7 @@
         </div>
 
         <div class="btn-container">
-            <a href="{{ $loginUrl }}" class="btn">Masuk ke Bilik Suara</a>
+            <a href="{{ $siteUrl ?? $loginUrl }}" class="btn">Buka Website PEMIRA</a>
         </div>
 
         <div class="warning">
@@ -234,23 +234,29 @@
         </div>
 
         <div class="steps">
-            <p>Cara Login:</p>
+            <p>Petunjuk Pemilihan:</p>
             <table class="step-table">
                 <tr>
                     <td class="step-num-td"><div class="step-num">1</div></td>
-                    <td class="step-text-td">Buka link <a href="{{ $loginUrl }}" style="color: #c9a227; text-decoration: none;">{{ $loginUrl }}</a></td>
+                    <td class="step-text-td">Kunjungi website utama PEMIRA melalui link <a href="{{ $siteUrl ?? $loginUrl }}" style="color: #c9a227; text-decoration: none;">{{ $siteUrl ?? $loginUrl }}</a></td>
                 </tr>
             </table>
             <table class="step-table">
                 <tr>
                     <td class="step-num-td"><div class="step-num">2</div></td>
-                    <td class="step-text-td">Masukkan <strong style="color: #cbd5e1;">NIM</strong> dan <strong style="color: #cbd5e1;">password</strong> seperti yang tertera di atas.</td>
+                    <td class="step-text-td">Klik tombol <strong style="color: #cbd5e1;">"Masuk"</strong> pada halaman utama.</td>
                 </tr>
             </table>
             <table class="step-table">
                 <tr>
                     <td class="step-num-td"><div class="step-num">3</div></td>
-                    <td class="step-text-td">Klik "Masuk ke Bilik Suara" dan berikan suara Anda.</td>
+                    <td class="step-text-td">Masukkan <strong style="color: #cbd5e1;">NIM</strong> dan <strong style="color: #cbd5e1;">password</strong> seperti yang tertera di atas.</td>
+                </tr>
+            </table>
+            <table class="step-table">
+                <tr>
+                    <td class="step-num-td"><div class="step-num">4</div></td>
+                    <td class="step-text-td">Masuk ke bilik suara dan tentukan pilihan terbaik Anda.</td>
                 </tr>
             </table>
         </div>

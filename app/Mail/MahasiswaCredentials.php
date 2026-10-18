@@ -38,7 +38,8 @@ class MahasiswaCredentials extends Mailable
             with: [
                 'mahasiswa'     => $this->mahasiswa,
                 'plainPassword' => $this->plainPassword,
-                'loginUrl'      => config('app.url') . '/login',
+                'siteUrl'       => rtrim(config('app.url'), '/'),
+                'loginUrl'      => rtrim(config('app.url'), '/') . '/login',
                 'tahun'         => now()->year,
             ],
         );
