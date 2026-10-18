@@ -104,7 +104,7 @@ const mainNavItems: NavItem[] = [
             <!-- Logo Left -->
             <Link :href="route('dashboard')" class="flex items-center gap-x-3 flex-shrink-0">
                 <div class="relative flex items-center justify-center size-10 rounded-full bg-[#202336] border border-yellow-500/30 shadow-md">
-                    <img src="/Logo pemira.png" alt="Logo PEMIRA" class="size-7 object-contain" onerror="this.style.display='none'" />
+                    <img src="/logo-pemira.webp" alt="Logo PEMIRA" width="28" height="28" decoding="async" class="size-7 object-contain" onerror="this.src='/Logo pemira.png'" />
                 </div>
                 <div class="hidden sm:block leading-tight border-l border-white/10 pl-3">
                     <p class="text-[9px] text-yellow-400 font-bold uppercase tracking-widest leading-none">Pemilihan Umum Raya</p>

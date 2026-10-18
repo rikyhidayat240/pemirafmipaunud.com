@@ -79,7 +79,7 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
       <!-- Empty State -->
       <div v-if="processedKegiatans.length === 0"
         class="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-        <img src="/Logo pemira.png" alt="" class="size-24 opacity-10">
+        <img src="/logo-pemira.webp" alt="" width="96" height="96" loading="lazy" decoding="async" class="size-24 opacity-10" onerror="this.src='/Logo pemira.png'">
         <h1 class="text-xl font-bold text-white/30">Belum Ada Data Pemilihan HIMA</h1>
       </div>
 
@@ -90,8 +90,8 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
           <div class="absolute inset-0 pointer-events-none transition-all duration-700"
             :style="{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${colors.glow}, transparent 70%)` }"></div>
           <!-- Logo watermark -->
-          <img src="/Logo pemira.png" alt=""
-            class="absolute inset-0 w-full h-full object-contain opacity-[0.04] scale-110 pointer-events-none">
+          <img src="/logo-pemira.webp" alt="" width="512" height="512" loading="lazy" decoding="async"
+            class="absolute inset-0 w-full h-full object-contain opacity-[0.04] scale-110 pointer-events-none" onerror="this.src='/Logo pemira.png'">
 
           <!-- Corner ornaments -->
           <div class="absolute top-0 left-0 w-28 opacity-20 pointer-events-none">
@@ -143,8 +143,8 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
           <div class="relative rounded-2xl overflow-hidden mb-6 py-8 text-center"
             :style="{ background: `linear-gradient(135deg, ${colors.from}cc, ${colors.to}99)` }"
             style="border: 1px solid rgba(255,255,255,0.1);">
-            <img src="/Logo pemira.png" alt=""
-              class="absolute inset-0 w-full h-full object-contain opacity-10 scale-110 pointer-events-none">
+            <img src="/logo-pemira.webp" alt="" width="512" height="512" loading="lazy" decoding="async"
+              class="absolute inset-0 w-full h-full object-contain opacity-10 scale-110 pointer-events-none" onerror="this.src='/Logo pemira.png'">
             <div class="relative z-10 px-4">
               <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-wide drop-shadow-lg">
                 {{ selectedKegiatan.nama }}

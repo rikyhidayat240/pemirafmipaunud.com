@@ -18,9 +18,10 @@ import dayjs from 'dayjs';
                 <div class="relative">
                     <div class="absolute inset-0 rounded-full"
                         style="background: radial-gradient(circle, rgba(201,162,39,0.4) 0%, transparent 70%); transform: scale(3); animation: shimmer-gold 3s ease-in-out infinite;"></div>
-                    <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                    <img src="/logo-pemira.webp" alt="Logo PEMIRA"
+                        width="96" height="96" decoding="async"
                         class="relative size-20 sm:size-24 drop-shadow-2xl object-contain"
-                        onerror="this.style.display='none'" />
+                        onerror="this.src='/Logo pemira.png'" />
                 </div>
 
                 <!-- Text -->

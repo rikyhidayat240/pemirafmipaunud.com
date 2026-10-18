@@ -228,7 +228,7 @@ const programStudiName = computed(() => {
                     style="background: linear-gradient(225deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 100% 100%);"></div>
 
                 <div class="relative z-10 flex flex-col items-center gap-2 text-center">
-                    <img src="/Logo pemira.png" alt="Logo PEMIRA" class="size-14 drop-shadow-lg" onerror="this.style.display='none'" />
+                    <img src="/logo-pemira.webp" alt="Logo PEMIRA" width="56" height="56" decoding="async" class="size-14 drop-shadow-lg" onerror="this.src='/Logo pemira.png'" />
                     <p class="text-xs text-white/40 uppercase tracking-widest">Selamat Datang di Bilik Suara</p>
                     <h1 class="text-lg sm:text-xl lg:text-2xl font-black text-white uppercase poppins-font leading-tight">
                         {{ currentStep !== 'complete' ? currentKegiatan.nama : `Pemilihan Umum Raya Mahasiswa FMIPA ${dayjs().year()}` }}

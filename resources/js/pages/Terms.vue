@@ -112,9 +112,10 @@ const terms = [
                     style="background: linear-gradient(225deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 100% 100%);"></div>
 
                 <div class="relative z-10 flex flex-col items-center gap-3 text-center">
-                    <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                    <img src="/logo-pemira.webp" alt="Logo PEMIRA"
+                        width="64" height="64" decoding="async"
                         class="size-16 drop-shadow-lg opacity-90"
-                        onerror="this.style.display='none'" />
+                        onerror="this.src='/Logo pemira.png'" />
                     <div>
                         <p class="text-xs text-white/40 uppercase tracking-widest">Selamat Datang di Bilik Suara</p>
                         <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase poppins-font mt-1">

@@ -6,13 +6,18 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
         
-        <link rel="icon" href="/Logo pemira.png?v=2" sizes="any">
-        <link rel="icon" href="/Logo pemira.png?v=2" type="image/png">
-        <link rel="apple-touch-icon" href="/Logo pemira.png?v=2">
+        <link rel="icon" href="/favicon.png" type="image/png">
+        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        <!-- Optimized Non-Blocking Web Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
+
+        <noscript>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" />
+        </noscript>
 
         @routes
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])

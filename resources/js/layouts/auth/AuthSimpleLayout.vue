@@ -16,12 +16,12 @@ defineProps<{
         <!-- Image decorations from Figma (scaled with viewport to fix zoom) -->
         <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
             <!-- Large Constellation (Group 186) -->
-            <img src="/group-186.png" class="absolute top-[5%] left-[2%] w-[30vw] max-w-[350px] min-w-[150px] opacity-80 animate-pulse" style="animation-duration: 6s;" alt="">
+            <img src="/group-186.png" width="350" height="700" decoding="async" class="absolute top-[5%] left-[2%] w-[30vw] max-w-[350px] min-w-[150px] opacity-80 animate-pulse" style="animation-duration: 6s;" alt="">
             
             <!-- Kite constellation (Group 220) -->
-            <img src="/group-220.png" class="absolute top-[2%] right-[10%] w-[20vw] max-w-[200px] min-w-[80px] opacity-80 animate-pulse" style="animation-duration: 8s;" alt="">
+            <img src="/group-220.png" width="200" height="240" decoding="async" class="absolute top-[2%] right-[10%] w-[20vw] max-w-[200px] min-w-[80px] opacity-80 animate-pulse" style="animation-duration: 8s;" alt="">
             <!-- Huge 4-pointed Star (Group 227) -->
-            <img src="/group-227.png" class="absolute bottom-[5%] right-[2%] w-[20vw] max-w-[250px] min-w-[120px] opacity-70 animate-pulse" style="animation-duration: 6s;" alt="">
+            <img src="/group-227.png" width="250" height="250" decoding="async" class="absolute bottom-[5%] right-[2%] w-[20vw] max-w-[250px] min-w-[120px] opacity-70 animate-pulse" style="animation-duration: 6s;" alt="">
             
             <!-- Static decorative stars -->
             <div class="absolute top-[15%] left-[25%] size-0.5 rounded-full bg-white/30" style="animation: twinkle 4s ease-in-out infinite 0.5s;"></div>
@@ -37,17 +37,18 @@ defineProps<{
                 style="box-shadow: 0 0 60px rgba(201,162,39,0.1), 0 20px 60px rgba(0,0,0,0.5);">
 
                 <!-- Corner ornaments (Group 187) as border inside the card -->
-                <img src="/Group 187.png" class="absolute top-0 left-0 w-16 opacity-70 mix-blend-screen pointer-events-none" alt="">
-                <img src="/Group 187.png" class="absolute bottom-0 right-0 w-16 opacity-70 mix-blend-screen pointer-events-none rotate-180" alt="">
+                <img src="/group-187.png" width="64" height="64" decoding="async" class="absolute top-0 left-0 w-16 opacity-70 mix-blend-screen pointer-events-none" alt="">
+                <img src="/group-187.png" width="64" height="64" decoding="async" class="absolute bottom-0 right-0 w-16 opacity-70 mix-blend-screen pointer-events-none rotate-180" alt="">
 
                 <div class="relative z-10">
                     <!-- Logo + Title -->
                     <div class="flex flex-col items-center gap-3 mb-6 mt-2">
                         <Link :href="route('home')" class="flex flex-col items-center gap-2">
                             <!-- Gunakan logo baru -->
-                            <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                            <img src="/logo-pemira.webp" alt="Logo PEMIRA"
+                                width="80" height="80" decoding="async"
                                 class="h-20 drop-shadow-lg object-contain"
-                                onerror="this.style.display='none'" />
+                                onerror="this.src='/Logo pemira.png'" />
                         </Link>
                         <div class="text-center mt-2">
                             <h1 class="text-xl font-bold text-white">{{ title }}</h1>

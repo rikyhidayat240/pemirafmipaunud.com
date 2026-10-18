@@ -148,13 +148,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center">
                     <div class="relative w-full h-full max-w-[1920px]">
                         <!-- Large Constellation (Group 186) -->
-                        <img src="/group-186.png" class="absolute top-[5%] left-[2%] w-[25vw] max-w-[300px] min-w-[150px] opacity-80 animate-pulse" style="animation-duration: 6s;" alt="">
+                        <img src="/group-186.png" width="300" height="600" decoding="async" class="absolute top-[5%] left-[2%] w-[25vw] max-w-[300px] min-w-[150px] opacity-80 animate-pulse" style="animation-duration: 6s;" alt="">
                         
                         <!-- Kite constellation (Group 220) -->
-                        <img src="/group-220.png" class="absolute top-[5%] right-[5%] w-[18vw] max-w-[200px] min-w-[100px] opacity-80 animate-pulse" style="animation-duration: 8s;" alt="">
+                        <img src="/group-220.png" width="200" height="240" decoding="async" class="absolute top-[5%] right-[5%] w-[18vw] max-w-[200px] min-w-[100px] opacity-80 animate-pulse" style="animation-duration: 8s;" alt="">
                         
                         <!-- Huge 4-Pointed Star (Group 227) -->
-                        <img src="/group-227.png" class="absolute bottom-[5%] right-[2%] w-[20vw] max-w-[250px] min-w-[120px] opacity-70 animate-pulse" style="animation-duration: 6s;" alt="">
+                        <img src="/group-227.png" width="250" height="250" decoding="async" class="absolute bottom-[5%] right-[2%] w-[20vw] max-w-[250px] min-w-[120px] opacity-70 animate-pulse" style="animation-duration: 6s;" alt="">
                     </div>
                 </div>
 
@@ -163,9 +163,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <!-- Logo glowing -->
                     <div class="relative animate-float-logo">
                         <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, rgba(201,162,39,0.3) 0%, transparent 70%); transform: scale(2.5); animation: shimmer-gold 3s ease-in-out infinite;"></div>
-                        <img src="/Logo pemira.png" alt="Logo PEMIRA"
+                        <img src="/logo-pemira.webp" alt="Logo PEMIRA"
+                            width="128" height="128" fetchpriority="high" decoding="async"
                             class="relative size-24 sm:size-28 lg:size-32 drop-shadow-2xl object-contain"
-                            onerror="this.style.display='none'" />
+                            onerror="this.src='/Logo pemira.png'" />
                     </div>
 
                     <!-- Decorative 4-pointed stars -->
@@ -238,7 +239,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div v-for="item in filteredKegiatan" :key="item.id"
                             class="pemira-card tilt-3d-card rounded-xl overflow-hidden hover:border-yellow-400/40 transition-all duration-500">
                             <div class="relative">
-                                <img :src="`/storage/${item.foto}`" alt="" class="w-full h-44 object-cover" />
+                                <img :src="`/storage/${item.foto}`" alt="" width="384" height="176" loading="lazy" decoding="async" class="w-full h-44 object-cover" />
                                 <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(14,18,55,0.8) 0%, transparent 60%);"></div>
                                 <div class="absolute bottom-3 left-4 right-4">
                                     <p class="font-bold text-white text-sm">{{ item.nama }}</p>

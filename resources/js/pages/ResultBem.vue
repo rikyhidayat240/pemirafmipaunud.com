@@ -45,8 +45,8 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
           style="background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,162,39,0.15) 0%, transparent 70%);"></div>
 
         <!-- Logo watermark -->
-        <img src="/Logo pemira.png" alt=""
-          class="absolute inset-0 w-full h-full object-contain opacity-[0.04] scale-110 pointer-events-none">
+        <img src="/logo-pemira.webp" alt="" width="512" height="512" loading="lazy" decoding="async"
+          class="absolute inset-0 w-full h-full object-contain opacity-[0.04] scale-110 pointer-events-none" onerror="this.src='/Logo pemira.png'">
 
         <!-- Corner gold lines -->
         <div class="absolute top-0 left-0 w-32 opacity-25 pointer-events-none">
@@ -146,7 +146,7 @@ const badgeLabel = computed(() => isVotingEnded.value ? '✦ Terpilih' : '✦ Un
 
       <!-- Empty state -->
       <div v-else class="flex flex-col items-center justify-center py-24 gap-4 text-center">
-        <img src="/Logo pemira.png" alt="" class="size-20 opacity-10">
+        <img src="/logo-pemira.webp" alt="" width="80" height="80" loading="lazy" decoding="async" class="size-20 opacity-10" onerror="this.src='/Logo pemira.png'">
         <p class="text-lg font-semibold text-white/30">Belum ada data pemilihan BEM saat ini.</p>
       </div>
 
