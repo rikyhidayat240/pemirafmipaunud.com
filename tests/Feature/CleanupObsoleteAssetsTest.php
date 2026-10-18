@@ -39,6 +39,7 @@ class CleanupObsoleteAssetsTest extends TestCase
         'favicon.png',
         'favicon-32x32.png',
         'images/background-logo-dpm.png',
+        'images/background-logo-dpm.webp',
         'images/blank-photo-icon.jpg',
         'images/blank-profile-picture.webp',
         'images/kotak-kosong.webp',
@@ -46,12 +47,19 @@ class CleanupObsoleteAssetsTest extends TestCase
         'images/frame-bem.webp',
         'images/frame-hima.webp',
         'images/foto-kegiatan/pemilihan-ketua-wakil-bem.png',
+        'images/foto-kegiatan/pemilihan-ketua-wakil-bem.webp',
         'images/foto-kegiatan/pemilihan-ketua-himabio.png',
+        'images/foto-kegiatan/pemilihan-ketua-himabio.webp',
         'images/foto-kegiatan/pemilihan-ketua-himafarma.png',
+        'images/foto-kegiatan/pemilihan-ketua-himafarma.webp',
         'images/foto-kegiatan/pemilihan-ketua-himafi.png',
+        'images/foto-kegiatan/pemilihan-ketua-himafi.webp',
         'images/foto-kegiatan/pemilihan-ketua-himaif.png',
+        'images/foto-kegiatan/pemilihan-ketua-himaif.webp',
         'images/foto-kegiatan/pemilihan-ketua-himaki.png',
+        'images/foto-kegiatan/pemilihan-ketua-himaki.webp',
         'images/foto-kegiatan/pemilihan-ketua-himatika.png',
+        'images/foto-kegiatan/pemilihan-ketua-himatika.webp',
     ];
 
     /**

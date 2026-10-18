@@ -66,8 +66,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     style="background: linear-gradient(225deg, rgba(201,162,39,0.4) 0%, transparent 60%); clip-path: polygon(0 0, 100% 0, 100% 100%);"></div>
 
                 <div class="relative z-10 text-center">
-                    <img :src="`/images/${kegiatan.foto?.replace('jpg', 'png') ?? 'background-logo-dpm.png'}`" alt=""
-                        class="size-14 mx-auto drop-shadow-lg mb-3" onerror="this.style.display='none'" />
+                    <img :src="`/images/${kegiatan.foto?.replace(/\.(jpg|png)$/, '.webp') ?? 'background-logo-dpm.webp'}`" alt=""
+                        width="56" height="56" loading="lazy" decoding="async"
+                        class="size-14 mx-auto drop-shadow-lg mb-3 object-contain"
+                        onerror="this.src='/images/background-logo-dpm.webp'; this.onerror=null;" />
                     <p class="text-xs text-white/40 uppercase tracking-widest">Pemilihan Umum Raya · FMIPA</p>
                     <h1 class="text-xl sm:text-2xl font-black text-white uppercase poppins-font mt-1">
                         {{ kegiatan.nama }}
