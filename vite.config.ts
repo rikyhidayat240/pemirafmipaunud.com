@@ -1,7 +1,15 @@
+import { execSync } from 'child_process';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+
+try {
+    execSync('python scripts/optimize_assets.py', { stdio: 'inherit' });
+} catch (e) {
+    console.warn('Asset optimization hook warning:', e);
+}
+
 
 export default defineConfig({
     plugins: [

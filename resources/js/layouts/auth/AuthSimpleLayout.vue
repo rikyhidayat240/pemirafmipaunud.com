@@ -11,7 +11,8 @@ defineProps<{
 <template>
     <!-- Full-page dark space background -->
     <div class="relative min-h-svh flex flex-col items-center justify-center overflow-hidden"
-        style="background-image: url('/StarfieldCanvas.png'); background-size: cover; background-position: center; background-attachment: fixed;">
+        style="background-image: url('/StarfieldCanvas.webp'); background-size: cover; background-position: center; background-attachment: fixed;">
+
 
         <!-- Image decorations from Figma (scaled with viewport to fix zoom) -->
         <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">

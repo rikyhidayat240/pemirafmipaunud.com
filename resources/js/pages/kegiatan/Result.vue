@@ -84,10 +84,13 @@ const frameImage = computed(() => {
         <div class="flex h-full flex-col gap-2 overflow-x-auto">
             <!-- Hero Section -->
             <div class="relative flex flex-col items-center justify-center">
+
                 <div class="w-full flex justify-between items-start relative">
-                    <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40">
-                    <img :src="`/images/${kegiatan.foto.replace('jpg', 'png')}`" alt="" class="h-12 sm:h-20 md:h-40 lg:h-50 my-auto">
-                    <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40 transform -scale-x-100">
+                    <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                    <img v-if="kegiatan.foto" :src="`/images/${kegiatan.foto.replace('jpg', 'png')}`" alt="" class="h-12 sm:h-20 md:h-40 lg:h-50 my-auto" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                    <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40 transform -scale-x-100" loading="lazy" decoding="async" onerror="this.style.display='none'">
+
+
                     <h1
                         class="text-sm sm:text-xl md:text-2xl lg:text-4xl leading-4 sm:leading-6 md:leading-8 lg:leading-10 font-bold text-center text-primary uppercase absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 px-2
                             drop-shadow-[0_2px_4px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
@@ -106,7 +109,8 @@ const frameImage = computed(() => {
                         <div class="flex items-center gap-4">
                             <!-- Frame & Image -->
                             <div class="relative w-40 shrink-0">
-                                <img :src="frameImage" class="w-full" />
+                                <img :src="frameImage" alt="" class="w-full" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
                                 
                                 <!-- BEM Style -->
                                 <div v-if="isFakultasLevel">
@@ -180,7 +184,8 @@ const frameImage = computed(() => {
                         <div class="flex items-center gap-4">
                             <!-- Frame & Image -->
                             <div class="relative w-40 shrink-0">
-                                <img :src="frameImage" class="w-full" />
+                                <img :src="frameImage" alt="" class="w-full" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
                                 
                                 <!-- BEM Style -->
                                 <div v-if="isFakultasLevel">
@@ -257,7 +262,8 @@ const frameImage = computed(() => {
                         <div class="col-span-2 flex flex-col items-center justify-center gap-2 lg:gap-4">
                             <!-- Frame & Image Kandidat 1 -->
                             <div class="relative w-full max-w-40 sm:max-w-xs lg:max-w-md">
-                                <img :src="frameImage" class="w-full max-h-84" />
+                                <img :src="frameImage" alt="" class="w-full max-h-84" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
                                 
                                 <!-- BEM Style -->
                                 <div v-if="isFakultasLevel">
@@ -349,7 +355,8 @@ const frameImage = computed(() => {
                         <div class="col-span-2 flex flex-col items-center justify-center gap-2 lg:gap-4">
                             <!-- Frame & Image Kandidat 2 -->
                             <div class="relative w-full max-w-40 sm:max-w-xs lg:max-w-md">
-                                <img :src="frameImage" class="w-full max-h-84" />
+                                <img :src="frameImage" alt="" class="w-full max-h-84" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
                                 
                                 <!-- BEM Style -->
                                 <div v-if="isFakultasLevel">
@@ -413,7 +420,8 @@ const frameImage = computed(() => {
                         <div v-for="(kandidat, index) in kandidatList" :key="kandidat.id" class="flex items-center gap-4">
                             <!-- Frame & Image -->
                             <div class="relative w-40 shrink-0">
-                                <img :src="frameImage" class="w-full" />
+                                <img :src="frameImage" alt="" class="w-full" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
                                 
                                 <!-- BEM Style -->
                                 <div v-if="isFakultasLevel">
@@ -491,7 +499,8 @@ const frameImage = computed(() => {
                             <div class="relative w-full flex gap-4 items-end">
                                 <!-- Frame & Image Container -->
                                 <div class="relative w-full mb-4">
-                                    <img :src="frameImage" class="w-full" />
+                                    <img :src="frameImage" alt="" class="w-full" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+
 
                                     <!-- BEM Style -->
                                     <div v-if="isFakultasLevel">

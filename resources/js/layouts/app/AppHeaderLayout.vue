@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { watch } from 'vue';
+import { defineAsyncComponent, ref, watch } from 'vue';
 import 'vue-sonner/style.css';
 import { usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,14 @@ import AppFooter from '@/components/AppFooter.vue';
 import type { BreadcrumbItemType } from '@/types';
 import AppContent from '@/components/AppContent.vue';
 import { Check, TriangleAlert, X } from 'lucide-vue-next';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+const Dialog = defineAsyncComponent(() => import('@/components/ui/dialog/Dialog.vue'));
+const DialogContent = defineAsyncComponent(() => import('@/components/ui/dialog/DialogContent.vue'));
+const DialogDescription = defineAsyncComponent(() => import('@/components/ui/dialog/DialogDescription.vue'));
+const DialogFooter = defineAsyncComponent(() => import('@/components/ui/dialog/DialogFooter.vue'));
+const DialogHeader = defineAsyncComponent(() => import('@/components/ui/dialog/DialogHeader.vue'));
+const DialogTitle = defineAsyncComponent(() => import('@/components/ui/dialog/DialogTitle.vue'));
+
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
@@ -46,7 +52,7 @@ watch(() => page.props.alert, (newFlash) => {
         <!-- Star background overlay using Figma Assets -->
         <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden flex justify-center">
             <!-- Full page Starfield background -->
-            <div class="absolute inset-0 z-[-1]" style="background-image: url('/StarfieldCanvas.png'); background-size: cover; background-position: center; background-attachment: fixed;"></div>
+            <div class="absolute inset-0 z-[-1]" style="background-image: url('/StarfieldCanvas.webp'); background-size: cover; background-position: center; background-attachment: fixed;"></div>
             
             <div class="relative w-full h-full max-w-[1920px]">
                 <!-- Static decorative stars -->

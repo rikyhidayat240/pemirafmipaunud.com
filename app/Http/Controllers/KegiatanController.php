@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Kegiatan;
 use App\Models\ProgramStudi;
 use App\Services\AuditLogService;
+use App\Services\ImageUploadService;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -78,19 +79,7 @@ class KegiatanController extends Controller
             // Store foto if exists
             $fotoPath = null;
             if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
-                // Get the uploaded file
-                $fotoFile = $request->file('foto');
-                $fotoName = $fotoFile->hashName();
-
-                // Define the avatar destination path
-                $fotoDestination = Storage::disk('public')->path('foto-kegiatan');
-                if (!file_exists($fotoDestination)) {
-                    mkdir($fotoDestination, 0755, true);
-                }
-
-                // Store the foto file
-                Storage::disk('public')->putFileAs('foto-kegiatan', $fotoFile, $fotoName);
-                $fotoPath = 'foto-kegiatan/' . $fotoName;
+                $fotoPath = ImageUploadService::storeEvent($request->file('foto'));
             }
 
             // Create new kegiatan record
@@ -229,11 +218,7 @@ class KegiatanController extends Controller
                     Storage::disk('public')->delete($fotoPath);
                 }
 
-                // Store new foto
-                $fotoFile = $request->file('foto');
-                $fotoName = $fotoFile->hashName();
-                Storage::disk('public')->putFileAs('foto-kegiatan', $fotoFile, $fotoName);
-                $fotoPath = 'foto-kegiatan/' . $fotoName;
+                $fotoPath = ImageUploadService::storeEvent($request->file('foto'));
             }
 
             // Update kegiatan

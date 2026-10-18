@@ -19,11 +19,15 @@
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" />
         </noscript>
 
+        <!-- Preload critical hero LCP assets -->
+        <link rel="preload" as="image" href="/logo-pemira.webp" type="image/webp" fetchpriority="high">
+        <link rel="preload" as="image" href="/StarfieldCanvas.webp" type="image/webp">
+
         @routes
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased min-w-[320px] overflow-x-hidden" style="background-color: #111635; background-image: url('/StarfieldCanvas.png'); background-size: cover; background-position: center; background-attachment: fixed;">
+    <body class="font-sans antialiased min-w-[320px] overflow-x-hidden" style="background-color: #111635; background-image: url('/StarfieldCanvas.webp'); background-size: cover; background-position: center; background-attachment: fixed;">
         @inertia
     </body>
 </html>

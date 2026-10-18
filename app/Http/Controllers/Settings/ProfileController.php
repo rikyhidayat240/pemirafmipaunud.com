@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\ImageUploadService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,16 +43,10 @@ class ProfileController extends Controller
             // Store avatar if exists
             $avatarPath = null;
             if ($request->hasFile('avatar') && $request->file('avatar')->isValid()) {
-                $avatarFile = $request->file('avatar');
-                $avatarName = $avatarFile->hashName();
-
-                $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
-                if (!file_exists($avatarDestination)) {
-                    mkdir($avatarDestination, 0755, true);
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
                 }
-
-                Storage::disk('public')->putFileAs('foto-mahasiswa', $avatarFile, $avatarName);
-                $avatarPath = 'foto-mahasiswa/' . $avatarName;
+                $avatarPath = ImageUploadService::storeStudent($request->file('avatar'));
             }
 
             // Check existing email

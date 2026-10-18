@@ -6,6 +6,7 @@ use App\Mail\MahasiswaCredentials;
 use App\Models\ProgramStudi;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -374,19 +375,7 @@ class MahasiswaController extends Controller
             // Store avatar if exists
             $avatarPath = null;
             if ($request->hasFile('avatar') && $request->file('avatar')->isValid()) {
-                // Get the uploaded file
-                $avatarFile = $request->file('avatar');
-                $avatarName = $avatarFile->hashName();
-
-                // Define the avatar destination path
-                $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
-                if (!file_exists($avatarDestination)) {
-                    mkdir($avatarDestination, 0755, true);
-                }
-
-                // Store the avatar file
-                Storage::disk('public')->putFileAs('foto-mahasiswa', $avatarFile, $avatarName);
-                $avatarPath = 'foto-mahasiswa/' . $avatarName;
+                $avatarPath = ImageUploadService::storeStudent($request->file('avatar'));
             }
 
             // Generate password acak dan email @student.unud.ac.id dari NIM
@@ -493,17 +482,7 @@ class MahasiswaController extends Controller
                     Storage::disk('public')->delete($avatarPath);
                 }
 
-                // Store new avatar
-                $avatarFile = $request->file('avatar');
-                $avatarName = $avatarFile->hashName();
-
-                $avatarDestination = Storage::disk('public')->path('foto-mahasiswa');
-                if (!file_exists($avatarDestination)) {
-                    mkdir($avatarDestination, 0755, true);
-                }
-
-                Storage::disk('public')->putFileAs('foto-mahasiswa', $avatarFile, $avatarName);
-                $avatarPath = 'foto-mahasiswa/' . $avatarName;
+                $avatarPath = ImageUploadService::storeStudent($request->file('avatar'));
             }
 
             // Update mahasiswa — preserve existing password, only update profile fields

@@ -3,9 +3,15 @@ import dayjs from 'dayjs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, Kegiatan } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue';
+
+
+const Accordion = defineAsyncComponent(() => import('@/components/ui/accordion/Accordion.vue'));
+const AccordionContent = defineAsyncComponent(() => import('@/components/ui/accordion/AccordionContent.vue'));
+const AccordionItem = defineAsyncComponent(() => import('@/components/ui/accordion/AccordionItem.vue'));
+const AccordionTrigger = defineAsyncComponent(() => import('@/components/ui/accordion/AccordionTrigger.vue'));
 import StarButton from '@/components/StarButton.vue';
+
 
 // define props
 const props = defineProps<{
@@ -164,7 +170,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="relative animate-float-logo">
                         <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, rgba(201,162,39,0.3) 0%, transparent 70%); transform: scale(2.5); animation: shimmer-gold 3s ease-in-out infinite;"></div>
                         <img src="/logo-pemira.webp" alt="Logo PEMIRA"
-                            width="128" height="128" fetchpriority="high" decoding="async"
+                            width="128" height="128" fetchpriority="high" loading="eager" decoding="async"
                             class="relative size-24 sm:size-28 lg:size-32 drop-shadow-2xl object-contain"
                             onerror="this.src='/Logo pemira.png'" />
                     </div>
