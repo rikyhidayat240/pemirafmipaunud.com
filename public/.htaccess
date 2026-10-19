@@ -5,6 +5,19 @@
 
     RewriteEngine On
 
+    # ----------------------------------------------------------------------
+    # | 1-Hop Canonical HTTPS & Host Redirection                           |
+    # ----------------------------------------------------------------------
+    # 1) Redirect www to non-www canonical origin in a single 301 hop
+    RewriteCond %{HTTP_HOST} ^www\.pemirafmipa\.dpmfmipaunud\.com$ [NC]
+    RewriteRule ^ https://pemirafmipa.dpmfmipaunud.com%{REQUEST_URI} [L,R=301]
+
+    # 2) Force HTTPS on canonical domain (handles direct & reverse proxy / Cloudflare)
+    RewriteCond %{HTTP_HOST} ^pemirafmipa\.dpmfmipaunud\.com$ [NC]
+    RewriteCond %{HTTPS} !=on [NC]
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://pemirafmipa.dpmfmipaunud.com%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

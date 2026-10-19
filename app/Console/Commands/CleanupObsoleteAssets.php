@@ -36,6 +36,15 @@ class CleanupObsoleteAssets extends Command
         'Logo pemira.webp'                        => 'Duplicate 242 KB file with 0 references; active views use /logo-pemira.webp (40 KB)',
         'group-188.png'                           => 'Unused constellation graphic (never rendered in any view)',
         'logo-pemira.svg'                         => 'Legacy vector logo superseded by logo-pemira.webp',
+        'StarfieldCanvas.png'                     => 'Superseded by StarfieldCanvas.webp (98 KB)',
+        'images/background-logo-dpm.png'          => 'Superseded by background-logo-dpm.webp (126 KB)',
+        'images/foto-kegiatan/pemilihan-ketua-wakil-bem.png' => 'Superseded by pemilihan-ketua-wakil-bem.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himabio.png'   => 'Superseded by pemilihan-ketua-himabio.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himafarma.png' => 'Superseded by pemilihan-ketua-himafarma.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himafi.png'    => 'Superseded by pemilihan-ketua-himafi.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himaif.png'    => 'Superseded by pemilihan-ketua-himaif.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himaki.png'    => 'Superseded by pemilihan-ketua-himaki.webp',
+        'images/foto-kegiatan/pemilihan-ketua-himatika.png'  => 'Superseded by pemilihan-ketua-himatika.webp',
     ];
 
     /**

@@ -87,7 +87,7 @@ const frameImage = computed(() => {
 
                 <div class="w-full flex justify-between items-start relative">
                     <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40" loading="lazy" decoding="async" onerror="this.style.display='none'">
-                    <img v-if="kegiatan.foto" :src="`/images/${kegiatan.foto.replace('jpg', 'png')}`" alt="" class="h-12 sm:h-20 md:h-40 lg:h-50 my-auto" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                    <img v-if="kegiatan.foto" :src="`/images/${kegiatan.foto.replace(/\.(jpg|jpeg|png)$/, '.webp')}`" alt="" class="h-12 sm:h-20 md:h-40 lg:h-50 my-auto" loading="lazy" decoding="async" onerror="this.style.display='none'">
                     <img src="/images/corner-image.png" alt="" class="w-12 sm:w-20 md:w-32 lg:w-40 transform -scale-x-100" loading="lazy" decoding="async" onerror="this.style.display='none'">
 
 

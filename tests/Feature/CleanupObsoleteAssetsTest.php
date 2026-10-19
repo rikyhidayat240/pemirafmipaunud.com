@@ -22,6 +22,15 @@ class CleanupObsoleteAssetsTest extends TestCase
         'Logo pemira.webp',
         'group-188.png',
         'logo-pemira.svg',
+        'StarfieldCanvas.png',
+        'images/background-logo-dpm.png',
+        'images/foto-kegiatan/pemilihan-ketua-wakil-bem.png',
+        'images/foto-kegiatan/pemilihan-ketua-himabio.png',
+        'images/foto-kegiatan/pemilihan-ketua-himafarma.png',
+        'images/foto-kegiatan/pemilihan-ketua-himafi.png',
+        'images/foto-kegiatan/pemilihan-ketua-himaif.png',
+        'images/foto-kegiatan/pemilihan-ketua-himaki.png',
+        'images/foto-kegiatan/pemilihan-ketua-himatika.png',
     ];
 
     /**
@@ -38,7 +47,6 @@ class CleanupObsoleteAssetsTest extends TestCase
         'apple-touch-icon.png',
         'favicon.png',
         'favicon-32x32.png',
-        'images/background-logo-dpm.png',
         'images/background-logo-dpm.webp',
         'images/blank-photo-icon.jpg',
         'images/blank-profile-picture.webp',
@@ -46,19 +54,12 @@ class CleanupObsoleteAssetsTest extends TestCase
         'images/corner-image.png',
         'images/frame-bem.webp',
         'images/frame-hima.webp',
-        'images/foto-kegiatan/pemilihan-ketua-wakil-bem.png',
         'images/foto-kegiatan/pemilihan-ketua-wakil-bem.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himabio.png',
         'images/foto-kegiatan/pemilihan-ketua-himabio.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himafarma.png',
         'images/foto-kegiatan/pemilihan-ketua-himafarma.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himafi.png',
         'images/foto-kegiatan/pemilihan-ketua-himafi.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himaif.png',
         'images/foto-kegiatan/pemilihan-ketua-himaif.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himaki.png',
         'images/foto-kegiatan/pemilihan-ketua-himaki.webp',
-        'images/foto-kegiatan/pemilihan-ketua-himatika.png',
         'images/foto-kegiatan/pemilihan-ketua-himatika.webp',
     ];
 

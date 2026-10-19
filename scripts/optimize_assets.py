@@ -9,6 +9,9 @@ IMAGES_DIR = os.path.join(PUBLIC_DIR, "images")
 def optimize_starfield():
     starfield_png = os.path.join(PUBLIC_DIR, "StarfieldCanvas.png")
     starfield_webp = os.path.join(PUBLIC_DIR, "StarfieldCanvas.webp")
+    if os.path.exists(starfield_webp) and os.path.getsize(starfield_webp) > 50000:
+        print(f"[Starfield] Already optimized: {os.path.getsize(starfield_webp)} bytes")
+        return
     if os.path.exists(starfield_png):
         with Image.open(starfield_png) as im:
             print(f"[Starfield] Original: {im.size}, {im.mode}, {os.path.getsize(starfield_png)} bytes")
