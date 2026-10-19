@@ -14,29 +14,45 @@ class BerandaController extends Controller
     private function getKegiatan()
     {
         $user = auth('web')->user();
-        if ($user->is_admin) return Kegiatan::all();
+        $selectCols = [
+            'id',
+            'nama',
+            'tahun',
+            'ruang_lingkup',
+            'id_program_studi',
+            'waktu_mulai',
+            'waktu_selesai',
+            'foto',
+        ];
+
+        if ($user->is_admin) {
+            return Kegiatan::query()
+                ->select($selectCols)
+                ->orderBy('tahun', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
         
-        $kegiatan = Kegiatan::where('waktu_selesai', '>', now())
+        $baseQuery = Kegiatan::query()
+            ->select($selectCols)
             ->where(function ($query) use ($user) {
                 $query->where('ruang_lingkup', 'fakultas')
                       ->orWhere(function ($q) use ($user) {
                           $q->where('ruang_lingkup', 'program studi')
                             ->where('id_program_studi', $user->id_program_studi);
                       });
-            })
+            });
+
+        $kegiatan = (clone $baseQuery)
+            ->where('waktu_selesai', '>', now())
+            ->orderBy('waktu_mulai', 'asc')
             ->get();
             
         if ($kegiatan->isEmpty()) {
-            $kegiatan = Kegiatan::where(function ($query) use ($user) {
-                $query->where('ruang_lingkup', 'fakultas')
-                      ->orWhere(function ($q) use ($user) {
-                          $q->where('ruang_lingkup', 'program studi')
-                            ->where('id_program_studi', $user->id_program_studi);
-                      });
-            })
-            ->latest('waktu_selesai')
-            ->limit(2)
-            ->get();
+            $kegiatan = (clone $baseQuery)
+                ->latest('waktu_selesai')
+                ->limit(2)
+                ->get();
         }
         
         return $kegiatan;
@@ -45,9 +61,11 @@ class BerandaController extends Controller
     public function getTime()
     {
         // First, try to get active kegiatan (waktu_selesai > now)
-        $activeKegiatan = Kegiatan::where('tahun', now()->year)
+        $activeKegiatan = Kegiatan::query()
+            ->select(['id', 'waktu_mulai', 'waktu_selesai', 'tahun'])
+            ->where('tahun', now()->year)
             ->where('waktu_selesai', '>', now())
-            ->orderBy('waktu_mulai')
+            ->orderBy('waktu_mulai', 'asc')
             ->first();
 
         if ($activeKegiatan) {
@@ -55,7 +73,10 @@ class BerandaController extends Controller
         }
 
         // If no active kegiatan, get the latest ended kegiatan
-        $latestKegiatan = Kegiatan::latest('waktu_selesai')->first();
+        $latestKegiatan = Kegiatan::query()
+            ->select(['id', 'waktu_mulai', 'waktu_selesai', 'tahun'])
+            ->latest('waktu_selesai')
+            ->first();
 
         return $latestKegiatan ? $latestKegiatan->waktu_mulai : now();
     }
