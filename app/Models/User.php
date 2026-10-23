@@ -103,25 +103,57 @@ class User extends Authenticatable
         foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
             $data = $worksheet->toArray();
             foreach ($data as $index => $row) {
-                // Skip header row
-                if ($index === 0) {
+                // Skip header or non-student rows (ensure NIM is a valid numeric string of at least 8 digits)
+                $nim = trim((string) ($row[1] ?? ''));
+                if (str_ends_with($nim, '.0')) {
+                    $nim = substr($nim, 0, -2);
+                }
+
+                if (!preg_match('/^\d{8,15}$/', $nim)) {
                     continue;
                 }
 
-                // Get program studi ID
-                $row[4] = str_replace('Sarjana ', '', $row[4]);
-                $prodiId = $programStudi->firstWhere('nama', $row[4])?->id;
+                $nama = trim((string) ($row[2] ?? ''));
 
-                // Get status aktif/nonaktif
-                $status = explode(' ', strtolower($row[5]))[0] === 'aktif' ? 'aktif' : 'nonaktif';
+                // Get program studi ID
+                $prodiName = trim(str_replace('Sarjana ', '', (string) ($row[4] ?? '')));
+                $prodiId = $programStudi->firstWhere('nama', $prodiName)?->id;
+
+                // Detect column format (format baru memuat kolom Jenjang 'S1' pada index 5)
+                $col5 = trim((string) ($row[5] ?? ''));
+                if (in_array(strtoupper($col5), ['S1', 'D3', 'PROFESI'])) {
+                    $angkatan = !empty($row[6]) ? (int) $row[6] : (int) ('20' . substr($nim, 0, 2));
+                    $statusRaw = strtolower(trim((string) ($row[7] ?? 'aktif')));
+                    $status = str_contains($statusRaw, 'aktif') && !str_contains($statusRaw, 'non') ? 'aktif' : 'nonaktif';
+                    $rawEmail = trim((string) ($row[8] ?? ''));
+                } else {
+                    $statusRaw = strtolower($col5);
+                    $status = str_contains($statusRaw, 'aktif') && !str_contains($statusRaw, 'non') ? 'aktif' : 'nonaktif';
+                    $angkatan = !empty($row[6]) ? (int) $row[6] : (int) ('20' . substr($nim, 0, 2));
+                    $rawEmail = trim((string) ($row[8] ?? ($row[7] ?? '')));
+                }
+
+                // Normalisasi & perbaikan anomali email
+                $email = $rawEmail;
+                if (str_contains(strtolower($email), '@gamil.com')) {
+                    $email = str_ireplace('@gamil.com', '@gmail.com', $email);
+                } elseif (str_ends_with(strtolower($email), '@gmail.co')) {
+                    $email = substr($email, 0, -3) . '.com';
+                }
+
+                // Validasi format email, fallback ke NIM@student.unud.ac.id jika kosong / tidak valid
+                if (empty($email) || in_array(strtolower($email), ['tidak ditemukan', '-', 'null', 'none']) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $email = $nim . '@student.unud.ac.id';
+                }
 
                 // Map row data to user attributes
                 $mahasiswaData[] = [
-                    'nim' => $row[1],
-                    'nama' => $row[2],
+                    'nim' => $nim,
+                    'nama' => $nama,
                     'id_program_studi' => $prodiId,
-                    'angkatan' => (int) $row[6],
+                    'angkatan' => $angkatan,
                     'status' => $status,
+                    'email' => $email,
                 ];
             }
         }

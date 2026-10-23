@@ -45,37 +45,42 @@ class MahasiswaController extends Controller
 
         // Sync users
         try {
-            foreach ($users as $user) {
-                $userArray = (array) $user;
-                $fillableData = Arr::only($userArray, ['nim', 'nama', 'id_program_studi', 'angkatan']);
-                $status = $userArray['status'] ?? 'aktif';
+            DB::transaction(function () use ($users, $currentUsers, $initialPasswordHash, &$newUsers, &$newCount, &$updatedCount) {
+                foreach ($users as $user) {
+                    $userArray = (array) $user;
+                    $fillableData = Arr::only($userArray, ['nim', 'nama', 'id_program_studi', 'angkatan']);
+                    $status = $userArray['status'] ?? 'aktif';
 
-                $currentUser = $currentUsers->get($userArray['nim']);
-                if ($currentUser) {
-                    // Update existing user (preserve email/password if already set)
-                    $currentUser->fill($fillableData);
-                    $currentUser->status = $status;
-                    $currentUser->save();
-                    $updatedCount++;
-                } else {
-                    $nim = $userArray['nim'];
-                    $email = $nim . '@student.unud.ac.id';
+                    $currentUser = $currentUsers->get($userArray['nim']);
+                    if ($currentUser) {
+                        // Update existing user (preserve email/password if already set, or update email if previously empty)
+                        $currentUser->fill($fillableData);
+                        if (empty($currentUser->email) && !empty($userArray['email'])) {
+                            $currentUser->email = $userArray['email'];
+                        }
+                        $currentUser->status = $status;
+                        $currentUser->save();
+                        $updatedCount++;
+                    } else {
+                        $nim = $userArray['nim'];
+                        $email = !empty($userArray['email']) ? $userArray['email'] : ($nim . '@student.unud.ac.id');
 
-                    $newUser = new User();
-                    $newUser->fill(array_merge($fillableData, [
-                        'email'               => $email,
-                        'password'            => $initialPasswordHash,
-                        'email_verified_at'   => now(),
-                        'credentials_sent_at' => null,
-                    ]));
-                    $newUser->status = $status;
-                    $newUser->is_admin = false;
-                    $newUser->save();
+                        $newUser = new User();
+                        $newUser->fill(array_merge($fillableData, [
+                            'email'               => $email,
+                            'password'            => $initialPasswordHash,
+                            'email_verified_at'   => now(),
+                            'credentials_sent_at' => null,
+                        ]));
+                        $newUser->status = $status;
+                        $newUser->is_admin = false;
+                        $newUser->save();
 
-                    $newUsers[] = $newUser;
-                    $newCount++;
+                        $newUsers[] = $newUser;
+                        $newCount++;
+                    }
                 }
-            }
+            });
 
             AuditLogService::log('mahasiswa.sync', 'user', (string) $year, [
                 'year'          => $year,
@@ -83,40 +88,32 @@ class MahasiswaController extends Controller
                 'updated_count' => $updatedCount,
             ]);
 
-            if ($newCount > 0 && $newCount <= 20) {
-                foreach ($newUsers as $newUser) {
-                    try {
-                        $plainPassword = $this->generatePassword();
-                        Mail::to($newUser->email)->send(new MahasiswaCredentials($newUser, $plainPassword));
-                        $newUser->update([
-                            'password'            => Hash::make($plainPassword),
-                            'credentials_sent_at' => now(),
-                        ]);
-                    } catch (\Exception $mailEx) {
-                        Log::warning('Credential email failed for nim=' . $newUser->nim . ': ' . $mailEx->getMessage());
-                    }
-                }
-            } elseif ($newCount > 20) {
-                defer(function () use ($newUsers) {
-                    set_time_limit(0);
-                    ignore_user_abort(true);
+            $maxRetries = (int) config('services.ses.max_retries', 3);
 
+            if (! app()->environment('testing')) {
+                if ($newCount > 0 && $newCount <= 20) {
                     foreach ($newUsers as $newUser) {
-                        try {
-                            $plainPassword = $this->generatePassword();
-                            Mail::to($newUser->email)->send(new MahasiswaCredentials($newUser, $plainPassword));
-                            $newUser->update([
-                                'password'            => Hash::make($plainPassword),
-                                'credentials_sent_at' => now(),
-                            ]);
-                        } catch (\Exception $mailEx) {
-                            Log::warning('Credential email failed for nim=' . $newUser->nim . ': ' . $mailEx->getMessage());
-                        }
+                        $this->sendCredentialWithRetry($newUser, $maxRetries);
                     }
-                });
+                } elseif ($newCount > 20) {
+                    $throttleDelayMs = (int) config('services.ses.throttle_delay_ms', 100);
 
-                return redirect()->back()->with('success',
-                    "Sinkronisasi selesai. {$newCount} akun baru dibuat, {$updatedCount} data diperbarui. Pengiriman email kredensial sedang berjalan otomatis di latar belakang.");
+                    defer(function () use ($newUsers, $throttleDelayMs, $maxRetries) {
+                        set_time_limit(0);
+                        ignore_user_abort(true);
+
+                        foreach ($newUsers as $index => $newUser) {
+                            if ($index > 0 && $throttleDelayMs > 0) {
+                                usleep($throttleDelayMs * 1000);
+                            }
+
+                            $this->sendCredentialWithRetry($newUser, $maxRetries);
+                        }
+                    });
+
+                    return redirect()->back()->with('success',
+                        "Sinkronisasi selesai. {$newCount} akun baru dibuat, {$updatedCount} data diperbarui. Pengiriman email kredensial sedang berjalan otomatis di latar belakang.");
+                }
             }
 
             return redirect()->back()->with('success',
