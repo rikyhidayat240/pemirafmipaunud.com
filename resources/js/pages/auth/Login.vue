@@ -107,17 +107,10 @@ const submit = () => {
             </div>
 
             <!-- Bottom Links -->
-            <div class="flex flex-col items-center gap-2 text-center">
+            <div class="flex flex-col items-center text-center">
                 <TextLink :href="route('home')" :tabindex="5" class="text-sm text-white/40 hover:text-white/70 transition-colors">
                     Kembali
                 </TextLink>
-                <span class="text-xs text-white/20">·</span>
-                <div class="text-xs text-white/30">
-                    Belum punya akun?
-                    <TextLink :href="route('register')" :tabindex="6" class="text-yellow-400/60 hover:text-yellow-400 transition-colors">
-                        Daftar
-                    </TextLink>
-                </div>
             </div>
         </form>
     </AuthBase>
