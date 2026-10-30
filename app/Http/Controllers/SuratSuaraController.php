@@ -36,6 +36,8 @@ class SuratSuaraController extends Controller
             ->where('waktu_selesai', '>', now())
             ->where('ruang_lingkup', 'fakultas')
             ->with(['kandidat.mahasiswa', 'programStudi'])
+            ->orderByDesc('waktu_mulai')
+            ->orderByDesc('id')
             ->first();
 
         // Fetch kegiatan HIMA (program studi level) without cache
@@ -44,6 +46,8 @@ class SuratSuaraController extends Controller
             ->where('ruang_lingkup', 'program studi')
             ->where('id_program_studi', $user->id_program_studi)
             ->with(['kandidat.mahasiswa', 'programStudi'])
+            ->orderByDesc('waktu_mulai')
+            ->orderByDesc('id')
             ->first();
 
         // 1. Check if ANY kegiatan exists

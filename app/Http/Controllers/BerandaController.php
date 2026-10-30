@@ -43,16 +43,25 @@ class BerandaController extends Controller
                       });
             });
 
+        $deduplicateByScope = fn ($item) => $item->ruang_lingkup === 'fakultas'
+            ? 'fakultas'
+            : 'prodi_' . $item->id_program_studi;
+
         $kegiatan = (clone $baseQuery)
             ->where('waktu_selesai', '>', now())
-            ->orderBy('waktu_mulai', 'asc')
-            ->get();
+            ->orderByDesc('waktu_mulai')
+            ->orderByDesc('id')
+            ->get()
+            ->unique($deduplicateByScope)
+            ->values();
             
         if ($kegiatan->isEmpty()) {
             $kegiatan = (clone $baseQuery)
-                ->latest('waktu_selesai')
-                ->limit(2)
-                ->get();
+                ->orderByDesc('waktu_selesai')
+                ->orderByDesc('id')
+                ->get()
+                ->unique($deduplicateByScope)
+                ->values();
         }
         
         return $kegiatan;
@@ -108,6 +117,9 @@ class BerandaController extends Controller
     {
         $kegiatan = Kegiatan::where('nama', str_replace('-', ' ', $slug))
             ->with('kandidat.mahasiswa')
+            ->orderByDesc('tahun')
+            ->orderByDesc('waktu_selesai')
+            ->orderByDesc('id')
             ->firstOrFail();
         $kandidat = Kandidat::where('id_kegiatan', $kegiatan->id)
             ->with('mahasiswa.programStudi')
@@ -128,41 +140,24 @@ class BerandaController extends Controller
     {
         $user = auth('web')->user();
 
-        // Admin can view live results anytime
-        if ($user && $user->is_admin) {
-            $kegiatan = Kegiatan::where('tahun', now()->year)
-                ->where('ruang_lingkup', 'fakultas')
-                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
-                ->latest('waktu_selesai')
-                ->first();
-
-            if ($kegiatan) {
-                $kegiatan->kandidat->each->makeVisible('jumlah_suara');
-            }
-
-            return Inertia::render('ResultBem', [
-                'kegiatan' => $kegiatan,
+        if (! $user || ! $user->is_admin) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'title' => 'Akses Ditolak',
+                'message' => 'Anda tidak memiliki akses ke halaman ini.',
             ]);
         }
 
-        // Regular users can ONLY view ended kegiatan (waktu_selesai <= now)
         $kegiatan = Kegiatan::where('tahun', now()->year)
             ->where('ruang_lingkup', 'fakultas')
-            ->where('waktu_selesai', '<=', now())
             ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
-            ->latest('waktu_selesai')
+            ->orderByDesc('waktu_selesai')
+            ->orderByDesc('id')
             ->first();
 
-        if (! $kegiatan) {
-            return redirect()->route('dashboard')->with('alert', [
-                'type' => 'info',
-                'title' => 'Hasil Belum Tersedia',
-                'message' => 'Hasil pemilihan BEM belum dapat dilihat karena pemilihan masih berlangsung atau belum ada kegiatan yang selesai.',
-            ]);
+        if ($kegiatan) {
+            $kegiatan->kandidat->each->makeVisible('jumlah_suara');
         }
-
-        // Reveal jumlah_suara only for ended event
-        $kegiatan->kandidat->each->makeVisible('jumlah_suara');
 
         return Inertia::render('ResultBem', [
             'kegiatan' => $kegiatan,
@@ -173,35 +168,23 @@ class BerandaController extends Controller
     {
         $user = auth('web')->user();
 
-        if ($user && $user->is_admin) {
-            $kegiatans = Kegiatan::where('tahun', now()->year)
-                ->where('ruang_lingkup', 'program studi')
-                ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
-                ->get();
-
-            $kegiatans->each(function ($k) {
-                $k->kandidat->each->makeVisible('jumlah_suara');
-            });
-
-            return Inertia::render('ResultHima', [
-                'kegiatans' => $kegiatans,
+        if (! $user || ! $user->is_admin) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'title' => 'Akses Ditolak',
+                'message' => 'Anda tidak memiliki akses ke halaman ini.',
             ]);
         }
 
-        // Regular users can ONLY view ended kegiatan
         $kegiatans = Kegiatan::where('tahun', now()->year)
             ->where('ruang_lingkup', 'program studi')
-            ->where('waktu_selesai', '<=', now())
             ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
-            ->get();
-
-        if ($kegiatans->isEmpty()) {
-            return redirect()->route('dashboard')->with('alert', [
-                'type' => 'info',
-                'title' => 'Hasil Belum Tersedia',
-                'message' => 'Hasil pemilihan HIMA belum dapat dilihat karena pemilihan masih berlangsung atau belum ada kegiatan yang selesai.',
-            ]);
-        }
+            ->orderByDesc('waktu_selesai')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('id_program_studi')
+            ->sortBy('id_program_studi')
+            ->values();
 
         $kegiatans->each(function ($k) {
             $k->kandidat->each->makeVisible('jumlah_suara');

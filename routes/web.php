@@ -13,8 +13,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('dashboard', 'index')->name('dashboard');
         Route::get('terms', 'terms')->name('terms');
         Route::get('candidates/{slug}', 'candidates')->name('candidates');
-        Route::get('result-bem', 'resultBem')->name('result-bem');
-        Route::get('result-hima', 'resultHima')->name('result-hima');
     });
 
     Route::controller(SuratSuaraController::class)->middleware('throttle:15,1')->group(function () {
@@ -23,6 +21,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('admin')->group(function () {
+        Route::get('result-bem', [BerandaController::class, 'resultBem'])->name('result-bem');
+        Route::get('result-hima', [BerandaController::class, 'resultHima'])->name('result-hima');
+
         Route::match(['post', 'delete'], 'users/bulk-delete', [MahasiswaController::class, 'bulkDestroy'])
             ->name('users.bulk-destroy');
 

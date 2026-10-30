@@ -6,6 +6,7 @@ use App\Mail\MahasiswaCredentials;
 use App\Models\AuditLog;
 use App\Models\Kandidat;
 use App\Models\Kegiatan;
+use App\Models\ProgramStudi;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1231,6 +1232,225 @@ class SecurityRegressionTest extends TestCase
         $student->refresh();
         $this->assertSame($originalHash, $student->password, 'Password di DB tidak boleh diubah');
         $this->assertNull($student->credentials_sent_at, 'credentials_sent_at harus tetap null');
+    }
+
+    /**
+     * Verifikasi bahwa halaman /result-bem dan /result-hima 100% dikunci khusus Admin,
+     * sehingga tamu (guest) maupun mahasiswa pemilih (non-admin) TIDAK dapat mengaksesnya
+     * bahkan setelah waktu_selesai kegiatan berakhir.
+     */
+    public function test_result_bem_and_hima_are_strictly_admin_only_even_after_voting_ends(): void
+    {
+        $prodi = ProgramStudi::firstOrCreate(['kode' => '51'], ['nama' => 'Kimia']);
+
+        $endedBem = Kegiatan::create([
+            'nama'             => 'Pemilihan BEM Selesai',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subHours(4),
+            'waktu_selesai'    => now()->subHour(),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/bem-ended.png',
+        ]);
+        Kandidat::create([
+            'id_kegiatan'  => $endedBem->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi',
+            'misi'         => 'Misi',
+            'jumlah_suara' => 88,
+        ]);
+
+        $endedHima = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Kimia Selesai',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subHours(4),
+            'waktu_selesai'    => now()->subHour(),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/hima-ended.png',
+        ]);
+        Kandidat::create([
+            'id_kegiatan'  => $endedHima->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi',
+            'misi'         => 'Misi',
+            'jumlah_suara' => 45,
+        ]);
+
+        // 1. Guest dialihkan ke login
+        $this->get('/result-bem')->assertRedirect('/login');
+        $this->get('/result-hima')->assertRedirect('/login');
+
+        // 2. Mahasiswa non-admin tetap ditolak (redirect ke dashboard) meskipun voting sudah selesai
+        $voter = User::factory()->create([
+            'nim'               => '2208511099',
+            'id_program_studi'  => $prodi->id,
+            'is_admin'          => false,
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+
+        $resBem = $this->actingAs($voter)->get('/result-bem');
+        $resBem->assertRedirect(route('dashboard'));
+        $resBem->assertSessionHas('alert');
+
+        $resHima = $this->actingAs($voter)->get('/result-hima');
+        $resHima->assertRedirect(route('dashboard'));
+        $resHima->assertSessionHas('alert');
+    }
+
+    /**
+     * Verifikasi bahwa Admin dapat mengakses /result-bem dan /result-hima,
+     * serta sistem otomatis hanya menampilkan 1 kegiatan terbaru untuk BEM
+     * dan 1 kegiatan terbaru per Program Studi di dropdown /result-hima (tidak menumpuk dengan bekas demo).
+     */
+    public function test_admin_result_bem_and_hima_deduplicate_to_latest_event_per_scope_and_prodi(): void
+    {
+        $prodiKimia = ProgramStudi::firstOrCreate(['kode' => '51'], ['nama' => 'Kimia']);
+        $prodiFisika = ProgramStudi::firstOrCreate(['kode' => '52'], ['nama' => 'Fisika']);
+
+        $admin = User::factory()->admin()->create([
+            'nim'               => 'admin_res_01',
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+
+        // Demo BEM lama + Real BEM baru di tahun yang sama
+        $demoBem = Kegiatan::create([
+            'nama'             => 'Demo Pemilihan BEM',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subDays(2),
+            'waktu_selesai'    => now()->subDay(),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/demo-bem.png',
+        ]);
+        $realBem = Kegiatan::create([
+            'nama'             => 'Pemilihan BEM Asli',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subHour(),
+            'waktu_selesai'    => now()->addHours(3),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/real-bem.png',
+        ]);
+        Kandidat::create([
+            'id_kegiatan'  => $realBem->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi',
+            'misi'         => 'Misi',
+            'jumlah_suara' => 17,
+        ]);
+
+        // Demo HIMA Kimia lama + Real HIMA Kimia baru + HIMA Fisika
+        $demoHimaKimia = Kegiatan::create([
+            'nama'             => 'Demo Pemilihan HIMA Kimia',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subDays(2),
+            'waktu_selesai'    => now()->subDay(),
+            'id_program_studi' => $prodiKimia->id,
+            'foto'             => 'foto-kegiatan/demo-kimia.png',
+        ]);
+        $realHimaKimia = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Kimia Asli',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subHour(),
+            'waktu_selesai'    => now()->addHours(3),
+            'id_program_studi' => $prodiKimia->id,
+            'foto'             => 'foto-kegiatan/real-kimia.png',
+        ]);
+        $realHimaFisika = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Fisika Asli',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) now()->year,
+            'waktu_mulai'      => now()->subHour(),
+            'waktu_selesai'    => now()->addHours(3),
+            'id_program_studi' => $prodiFisika->id,
+            'foto'             => 'foto-kegiatan/real-fisika.png',
+        ]);
+
+        $resBem = $this->actingAs($admin)->get('/result-bem');
+        $resBem->assertOk();
+        $bemProp = $resBem->viewData('page')['props']['kegiatan'];
+        $this->assertSame($realBem->id, $bemProp['id']);
+        $this->assertNotSame($demoBem->id, $bemProp['id']);
+        $this->assertSame(17, $bemProp['kandidat'][0]['jumlah_suara']);
+
+        $resHima = $this->actingAs($admin)->get('/result-hima');
+        $resHima->assertOk();
+        $himaProps = $resHima->viewData('page')['props']['kegiatans'];
+        $returnedIds = array_column($himaProps, 'id');
+
+        $this->assertCount(2, $himaProps, 'Hanya boleh ada tepat 1 kegiatan terbaru per Program Studi');
+        $this->assertContains($realHimaKimia->id, $returnedIds);
+        $this->assertContains($realHimaFisika->id, $returnedIds);
+        $this->assertNotContains($demoHimaKimia->id, $returnedIds);
+    }
+
+    /**
+     * Verifikasi bahwa halaman bilik suara /vote selalu mengambil kegiatan aktif TERBARU
+     * apabila masih ada kegiatan demo lama yang belum terhapus.
+     */
+    public function test_vote_page_picks_latest_active_bem_and_hima_events_when_demo_events_overlap(): void
+    {
+        $prodi = ProgramStudi::firstOrCreate(['kode' => '51'], ['nama' => 'Kimia']);
+
+        $voter = User::factory()->create([
+            'nim'               => '2308511088',
+            'id_program_studi'  => $prodi->id,
+            'is_admin'          => false,
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+
+        $oldDemoBem = Kegiatan::create([
+            'nama'             => 'Demo BEM Lama',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subHours(5),
+            'waktu_selesai'    => now()->addHour(),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/old-bem.png',
+        ]);
+        $latestBem = Kegiatan::create([
+            'nama'             => 'Pemilihan BEM Terbaru',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subHour(),
+            'waktu_selesai'    => now()->addHours(4),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/new-bem.png',
+        ]);
+
+        $oldDemoHima = Kegiatan::create([
+            'nama'             => 'Demo HIMA Kimia Lama',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subHours(5),
+            'waktu_selesai'    => now()->addHour(),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/old-hima.png',
+        ]);
+        $latestHima = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Kimia Terbaru',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subHour(),
+            'waktu_selesai'    => now()->addHours(4),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/new-hima.png',
+        ]);
+
+        $response = $this->actingAs($voter)->get('/vote');
+        $response->assertOk();
+
+        $props = $response->viewData('page')['props'];
+        $this->assertSame($latestBem->id, $props['kegiatanBem']['id']);
+        $this->assertNotSame($oldDemoBem->id, $props['kegiatanBem']['id']);
+        $this->assertSame($latestHima->id, $props['kegiatanHima']['id']);
+        $this->assertNotSame($oldDemoHima->id, $props['kegiatanHima']['id']);
     }
 }
 
