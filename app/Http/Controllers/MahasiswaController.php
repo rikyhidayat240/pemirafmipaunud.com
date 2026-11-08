@@ -20,6 +20,12 @@ use Inertia\Inertia;
 
 class MahasiswaController extends Controller
 {
+    public const BULK_LOCK_KEY = 'pemira_bulk_email_lock';
+
+    public const BULK_LOCK_SECONDS = 90;
+
+    protected ?string $lastSendError = null;
+
     /**
      * Get mahasiswa data from spreadsheet.
      */
@@ -160,14 +166,24 @@ class MahasiswaController extends Controller
 
     /**
      * Send credential email to all students (Bulk).
+     * Supports chunked JSON batches (browser loop with short 90s self-healing lock) and legacy form POST.
      */
     public function sendBulkCredentials(Request $request)
     {
-        set_time_limit(0);
+        set_time_limit(120);
         ignore_user_abort(true);
 
-        $lock = Cache::lock('pemira_bulk_email_lock', 3600);
+        $isChunked = $request->boolean('chunked', false) || $request->expectsJson();
+
+        $lock = Cache::lock(self::BULK_LOCK_KEY, self::BULK_LOCK_SECONDS);
         if (! $lock->get()) {
+            if ($isChunked) {
+                return response()->json([
+                    'status'  => 'locked',
+                    'message' => 'Pengiriman email massal lain sedang berjalan. Menunggu giliran...',
+                ], 409);
+            }
+
             return back()->with('error', 'Pengiriman email massal sedang berjalan di latar belakang. Silakan refresh halaman secara berkala untuk memantau progres.');
         }
 
@@ -175,16 +191,121 @@ class MahasiswaController extends Controller
 
         try {
             $onlyUnsent = $request->boolean('only_unsent', false);
+            $onlyActive = $request->boolean('only_active', false);
+            $prodi      = $request->input('id_program_studi');
+            $angkatan   = $request->input('angkatan');
 
-            $query = User::where('is_admin', false)
+            $baseQuery = User::where('is_admin', false)
                 ->whereNotNull('email')
                 ->where('email', '!=', '');
 
-            if ($onlyUnsent) {
-                $query->whereNull('credentials_sent_at');
+            if ($onlyActive) {
+                $baseQuery->where('status', 'aktif');
             }
 
-            $mahasiswaList = $query->get();
+            if ($onlyUnsent) {
+                $baseQuery->whereNull('credentials_sent_at');
+            }
+
+            if ($prodi !== null && $prodi !== '' && $prodi !== 'all') {
+                $baseQuery->where('id_program_studi', (int) $prodi);
+            }
+
+            if ($angkatan !== null && $angkatan !== '' && $angkatan !== 'all') {
+                $baseQuery->where('angkatan', (int) $angkatan);
+            }
+
+            $throttleDelayMs = (int) config('services.ses.throttle_delay_ms', 100);
+            $maxRetries      = (int) config('services.ses.max_retries', 3);
+
+            if ($isChunked) {
+                $batchSize = max(1, min(25, (int) $request->input('batch_size', 15)));
+                $afterNim  = $request->filled('after_nim') ? trim((string) $request->input('after_nim')) : null;
+
+                $batchQuery = (clone $baseQuery)->orderBy('nim', 'asc');
+                if ($afterNim !== null && $afterNim !== '') {
+                    $batchQuery->where('nim', '>', $afterNim);
+                }
+
+                $batch = $batchQuery->limit($batchSize)->get();
+
+                if ($batch->isEmpty()) {
+                    return response()->json([
+                        'status'         => 'empty',
+                        'batch_total'    => 0,
+                        'sent'           => 0,
+                        'failed'         => 0,
+                        'remaining'      => 0,
+                        'has_more'       => false,
+                        'next_after_nim' => null,
+                        'last_angkatan'  => null,
+                        'quota_exceeded' => false,
+                        'message'        => 'Tidak ada mahasiswa yang memenuhi syarat pengiriman email.',
+                    ]);
+                }
+
+                $sent = 0;
+                $failed = 0;
+                $lastNim = null;
+                $lastAngkatan = null;
+                $quotaExceeded = false;
+
+                foreach ($batch->values() as $index => $mahasiswa) {
+                    if ($index > 0 && $index % 5 === 0 && method_exists($lock, 'refresh')) {
+                        $lock->refresh(self::BULK_LOCK_SECONDS);
+                    }
+
+                    if ($index > 0 && $throttleDelayMs > 0) {
+                        usleep($throttleDelayMs * 1000);
+                    }
+
+                    $lastNim = (string) $mahasiswa->nim;
+                    $lastAngkatan = $mahasiswa->angkatan;
+
+                    if ($this->sendCredentialWithRetry($mahasiswa, $maxRetries)) {
+                        $sent++;
+                    } else {
+                        $failed++;
+                        if ($this->isQuotaExceededError($this->lastSendError)) {
+                            $quotaExceeded = true;
+                            break;
+                        }
+                    }
+                }
+
+                $remaining = (! $quotaExceeded && $lastNim !== null)
+                    ? (clone $baseQuery)->where('nim', '>', $lastNim)->count()
+                    : 0;
+
+                AuditLogService::log('mahasiswa.send_bulk_credentials', 'user', null, [
+                    'batch_total'      => $sent + $failed,
+                    'sent'             => $sent,
+                    'failed'           => $failed,
+                    'remaining'        => $remaining,
+                    'only_unsent'      => $onlyUnsent,
+                    'only_active'      => $onlyActive,
+                    'angkatan'         => $angkatan,
+                    'id_program_studi' => $prodi,
+                    'chunked'          => true,
+                ]);
+
+                return response()->json([
+                    'status'         => 'ok',
+                    'batch_total'    => $sent + $failed,
+                    'sent'           => $sent,
+                    'failed'         => $failed,
+                    'remaining'      => $remaining,
+                    'has_more'       => ! $quotaExceeded && $remaining > 0,
+                    'next_after_nim' => $lastNim,
+                    'last_angkatan'  => $lastAngkatan,
+                    'quota_exceeded' => $quotaExceeded,
+                    'message'        => $quotaExceeded
+                        ? 'Kuota pengiriman harian Amazon SES telah habis. Silakan lanjutkan kembali setelah kuota harian direset.'
+                        : null,
+                ]);
+            }
+
+            $mahasiswaList = (clone $baseQuery)->orderBy('nim', 'asc')->get();
 
             if ($mahasiswaList->isEmpty()) {
                 return back()->with('error', 'Tidak ada mahasiswa yang memenuhi syarat pengiriman email.');
@@ -197,10 +318,7 @@ class MahasiswaController extends Controller
                 'only_unsent' => $onlyUnsent,
             ]);
 
-            $throttleDelayMs = (int) config('services.ses.throttle_delay_ms', 100);
-            $maxRetries      = (int) config('services.ses.max_retries', 3);
-
-            // For large batches (> 20), execute in background after sending HTTP response to avoid 504 Gateway Timeout
+            // For non-JSON callers with > 20 recipients, run in background with periodic lock heartbeat
             if ($total > 20) {
                 $isDeferred = true;
 
@@ -209,12 +327,18 @@ class MahasiswaController extends Controller
                     ignore_user_abort(true);
 
                     try {
-                        foreach ($mahasiswaList as $index => $mahasiswa) {
+                        foreach ($mahasiswaList->values() as $index => $mahasiswa) {
+                            if ($index > 0 && $index % 5 === 0 && method_exists($lock, 'refresh')) {
+                                $lock->refresh(self::BULK_LOCK_SECONDS);
+                            }
+
                             if ($index > 0 && $throttleDelayMs > 0) {
                                 usleep($throttleDelayMs * 1000);
                             }
 
-                            $this->sendCredentialWithRetry($mahasiswa, $maxRetries);
+                            if (! $this->sendCredentialWithRetry($mahasiswa, $maxRetries) && $this->isQuotaExceededError($this->lastSendError)) {
+                                break;
+                            }
                         }
                     } finally {
                         optional($lock)->release();
@@ -227,7 +351,11 @@ class MahasiswaController extends Controller
             $sent = 0;
             $failed = 0;
 
-            foreach ($mahasiswaList as $index => $mahasiswa) {
+            foreach ($mahasiswaList->values() as $index => $mahasiswa) {
+                if ($index > 0 && $index % 5 === 0 && method_exists($lock, 'refresh')) {
+                    $lock->refresh(self::BULK_LOCK_SECONDS);
+                }
+
                 if ($index > 0 && $throttleDelayMs > 0) {
                     usleep($throttleDelayMs * 1000);
                 }
@@ -236,6 +364,9 @@ class MahasiswaController extends Controller
                     $sent++;
                 } else {
                     $failed++;
+                    if ($this->isQuotaExceededError($this->lastSendError)) {
+                        break;
+                    }
                 }
             }
 
@@ -259,6 +390,7 @@ class MahasiswaController extends Controller
     {
         $attempt = 0;
         $backoffBaseMs = (int) config('services.ses.backoff_base_ms', app()->environment('testing') ? 1 : 1000);
+        $this->lastSendError = null;
 
         while ($attempt < $maxRetries) {
             $attempt++;
@@ -276,6 +408,8 @@ class MahasiswaController extends Controller
 
                 return true;
             } catch (\Throwable $e) {
+                $this->lastSendError = $e->getMessage();
+
                 if ($this->isThrottlingException($e) && $attempt < $maxRetries) {
                     $sleepMs = $backoffBaseMs * (int) pow(2, $attempt - 1);
                     Log::warning("Email throttling encountered for nim={$mahasiswa->nim} (attempt {$attempt}/{$maxRetries}). Retrying in {$sleepMs}ms: {$e->getMessage()}");
@@ -289,6 +423,22 @@ class MahasiswaController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Check whether an SMTP error indicates daily quota exhaustion or account-level sending pause.
+     */
+    public function isQuotaExceededError(?string $error): bool
+    {
+        if ($error === null || $error === '') {
+            return false;
+        }
+
+        $message = strtolower($error);
+
+        return (str_contains($message, 'daily') && str_contains($message, 'quota'))
+            || str_contains($message, 'sending quota exceeded')
+            || str_contains($message, 'sending paused for this account');
     }
 
     /**

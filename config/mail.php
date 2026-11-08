@@ -45,7 +45,10 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'timeout' => (int) env('MAIL_TIMEOUT', 15),
+            'ping_threshold' => (int) env('MAIL_PING_THRESHOLD', 10),
+            'restart_threshold' => (int) env('MAIL_RESTART_THRESHOLD', 50),
+            'restart_threshold_sleep' => (int) env('MAIL_RESTART_SLEEP', 0),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 

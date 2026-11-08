@@ -16,6 +16,8 @@ class SendMahasiswaCredentials extends Command
                             {--limit=0 : Maximum emails to send in this run (0 = semua sekaligus tanpa batas)}
                             {--prodi= : Filter by program studi ID}
                             {--angkatan= : Filter by angkatan year}
+                            {--only-active : Send only to students with status=aktif}
+                            {--force-unlock : Force release any stale bulk email lock before starting}
                             {--resend : Resend even if already sent before}
                             {--nim= : Send to a specific NIM only}';
 
@@ -25,11 +27,13 @@ class SendMahasiswaCredentials extends Command
     {
         set_time_limit(0);
 
-        $limit    = (int) $this->option('limit');
-        $prodi    = $this->option('prodi');
-        $angkatan = $this->option('angkatan');
-        $resend   = $this->option('resend');
-        $nimOnly  = $this->option('nim');
+        $limit       = (int) $this->option('limit');
+        $prodi       = $this->option('prodi');
+        $angkatan    = $this->option('angkatan');
+        $onlyActive  = (bool) $this->option('only-active');
+        $forceUnlock = (bool) $this->option('force-unlock');
+        $resend      = $this->option('resend');
+        $nimOnly     = $this->option('nim');
 
         $query = User::where('is_admin', false)
             ->whereNotNull('email')
@@ -39,6 +43,10 @@ class SendMahasiswaCredentials extends Command
         if ($nimOnly) {
             $query->where('nim', $nimOnly);
         } else {
+            if ($onlyActive) {
+                $query->where('status', 'aktif');
+            }
+
             // Filter: only unsent (unless --resend)
             if (!$resend) {
                 $query->whereNull('credentials_sent_at');
@@ -60,7 +68,12 @@ class SendMahasiswaCredentials extends Command
             return self::SUCCESS;
         }
 
-        $lock = Cache::lock('pemira_bulk_email_lock', 3600);
+        if ($forceUnlock) {
+            Cache::lock('pemira_bulk_email_lock')->forceRelease();
+            $this->info('Lock pemira_bulk_email_lock lama berhasil dilepas paksa.');
+        }
+
+        $lock = Cache::lock('pemira_bulk_email_lock', 90);
         if (! $lock->get()) {
             $this->warn('Pengiriman email massal lain sedang berlangsung (lock aktif). Silakan tunggu hingga selesai.');
             return self::FAILURE;
@@ -69,6 +82,8 @@ class SendMahasiswaCredentials extends Command
         try {
             $throttleDelayMs = (int) config('services.ses.throttle_delay_ms', 100);
             $maxRetries      = (int) config('services.ses.max_retries', 3);
+
+            $query->orderBy('nim', 'asc');
 
             $this->info("Total yang akan diproses: {$total}");
             if ($limit > 0) {
@@ -85,7 +100,11 @@ class SendMahasiswaCredentials extends Command
             $bar = $this->output->createProgressBar($mahasiswaList->count());
             $bar->start();
 
-            foreach ($mahasiswaList as $index => $mahasiswa) {
+            foreach ($mahasiswaList->values() as $index => $mahasiswa) {
+                if ($index > 0 && $index % 5 === 0 && method_exists($lock, 'refresh')) {
+                    $lock->refresh(90);
+                }
+
                 if ($index > 0 && $throttleDelayMs > 0) {
                     usleep($throttleDelayMs * 1000);
                 }

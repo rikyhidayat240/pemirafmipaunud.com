@@ -10,8 +10,9 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { toast } from 'vue-sonner'
 import type { ColumnDef, SortingState, ColumnFiltersState, PaginationState } from '@tanstack/vue-table'
-import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle, Mail, Send } from 'lucide-vue-next'
+import { CircleX, Filter, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, LoaderCircle, Mail, Send, CheckCircle2, TriangleAlert } from 'lucide-vue-next'
 import { FlexRender, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, useVueTable } from '@tanstack/vue-table'
 
 // Define props untuk data mahasiswa
@@ -42,6 +43,35 @@ const isSyncing = ref(false);
 const sendingNim = ref<string | null>(null);
 const isBulkSending = ref(false);
 const bulkOnlyUnsent = ref(true);
+const bulkOnlyActive = ref(true);
+const bulkProdi = ref<string>('all');
+const bulkAngkatan = ref<string>('all');
+const bulkCancelRequested = ref(false);
+const BULK_CHUNK_SIZE = 15;
+
+const bulkProgress = ref<{
+    active: boolean;
+    finished: boolean;
+    stopped: boolean;
+    quotaExceeded: boolean;
+    targetTotal: number;
+    processed: number;
+    sent: number;
+    failed: number;
+    currentAngkatan: string | number | null;
+    errorMessage: string | null;
+}>({
+    active: false,
+    finished: false,
+    stopped: false,
+    quotaExceeded: false,
+    targetTotal: 0,
+    processed: 0,
+    sent: 0,
+    failed: 0,
+    currentAngkatan: null,
+    errorMessage: null,
+});
 
 // Computed values
 const activeFilters = computed(() => {
@@ -54,6 +84,22 @@ const totalWithEmail = computed(() => {
 
 const totalUnsent = computed(() => {
     return props.data.filter((u: any) => u.email && !u.credentials_sent_at && !u.is_admin).length;
+})
+
+const bulkTargetCandidates = computed(() => {
+    return props.data.filter((u: any) => {
+        if (u.is_admin || !u.email || String(u.email).trim() === '') return false;
+        if (bulkOnlyActive.value && u.status !== 'aktif') return false;
+        if (bulkOnlyUnsent.value && u.credentials_sent_at) return false;
+        if (bulkProdi.value !== 'all' && String(u.id_program_studi) !== String(bulkProdi.value)) return false;
+        if (bulkAngkatan.value !== 'all' && String(u.angkatan) !== String(bulkAngkatan.value)) return false;
+        return true;
+    });
+})
+
+const bulkProgressPercent = computed(() => {
+    if (bulkProgress.value.targetTotal <= 0) return 0;
+    return Math.min(100, Math.round((bulkProgress.value.processed / bulkProgress.value.targetTotal) * 100));
 })
 
 // Setup table instance
@@ -210,26 +256,205 @@ const handleSendCredentials = (nim: string, event: Event) => {
     );
 };
 
-// Kirim password massal (bulk)
-const handleBulkSend = () => {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getCsrfHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+    const xsrfMatch = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    if (xsrfMatch && xsrfMatch[1]) {
+        headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfMatch[1]);
+    } else {
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+            headers['X-CSRF-TOKEN'] = metaToken;
+        }
+    }
+    return headers;
+};
+
+const resetBulkProgress = () => {
+    bulkResumeAfterNim.value = null;
+    bulkProgress.value = {
+        active: false,
+        finished: false,
+        stopped: false,
+        quotaExceeded: false,
+        targetTotal: 0,
+        processed: 0,
+        sent: 0,
+        failed: 0,
+        currentAngkatan: null,
+        errorMessage: null,
+    };
+};
+
+const bulkResumeAfterNim = ref<string | null>(null);
+
+const handleStopBulkSend = () => {
+    bulkCancelRequested.value = true;
+};
+
+// Kirim password massal bertahap (chunked per 15 mahasiswa agar aman dari timeout server)
+const handleBulkSend = async () => {
+    if (isBulkSending.value) return;
+
+    const isResuming = (bulkProgress.value.stopped || Boolean(bulkProgress.value.errorMessage)) && bulkResumeAfterNim.value !== null;
+
     isBulkSending.value = true;
-    router.post(
-        route('users.send-bulk-credentials'),
-        { only_unsent: bulkOnlyUnsent.value },
-        {
-            onSuccess: () => {
-                isBulkDialogOpen.value = false;
-                isBulkSending.value = false;
-            },
-            onError: () => {
-                isBulkSending.value = false;
-            },
-            onFinish: () => {
-                isBulkSending.value = false;
+    bulkCancelRequested.value = false;
+
+    if (isResuming) {
+        bulkProgress.value.active = true;
+        bulkProgress.value.finished = false;
+        bulkProgress.value.stopped = false;
+        bulkProgress.value.quotaExceeded = false;
+        bulkProgress.value.errorMessage = null;
+    } else {
+        bulkResumeAfterNim.value = null;
+        bulkProgress.value = {
+            active: true,
+            finished: false,
+            stopped: false,
+            quotaExceeded: false,
+            targetTotal: bulkTargetCandidates.value.length,
+            processed: 0,
+            sent: 0,
+            failed: 0,
+            currentAngkatan: null,
+            errorMessage: null,
+        };
+    }
+
+    let afterNim: string | null = bulkResumeAfterNim.value;
+    let lockRetries = 0;
+    let networkRetries = 0;
+
+    try {
+        while (!bulkCancelRequested.value) {
+            let response: Response;
+            try {
+                response = await fetch(route('users.send-bulk-credentials'), {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: getCsrfHeaders(),
+                    body: JSON.stringify({
+                        chunked: true,
+                        batch_size: BULK_CHUNK_SIZE,
+                        after_nim: afterNim,
+                        only_unsent: bulkOnlyUnsent.value,
+                        only_active: bulkOnlyActive.value,
+                        id_program_studi: bulkProdi.value === 'all' ? null : Number(bulkProdi.value),
+                        angkatan: bulkAngkatan.value === 'all' ? null : Number(bulkAngkatan.value),
+                    }),
+                });
+            } catch {
+                if (networkRetries < 3) {
+                    networkRetries++;
+                    await sleep(2500);
+                    continue;
+                }
+                bulkProgress.value.errorMessage = 'Koneksi jaringan terputus. Sebagian email sudah terkirim — silakan klik Kirim Sekarang lagi untuk melanjutkan sisanya.';
+                break;
+            }
+
+            if (response.status === 409) {
+                if (lockRetries < 5) {
+                    lockRetries++;
+                    await sleep(3000);
+                    continue;
+                }
+                const lockedJson = await response.json().catch(() => null);
+                bulkProgress.value.errorMessage = lockedJson?.message || 'Pengiriman email massal lain masih aktif. Coba lagi dalam beberapa detik.';
+                break;
+            }
+
+            if (!response.ok) {
+                if ((response.status === 502 || response.status === 503 || response.status === 504) && networkRetries < 3) {
+                    networkRetries++;
+                    await sleep(2500);
+                    continue;
+                }
+                const errJson = await response.json().catch(() => null);
+                bulkProgress.value.errorMessage = errJson?.message || `Server mengembalikan status ${response.status}. Silakan lanjutkan kembali.`;
+                break;
+            }
+
+            lockRetries = 0;
+            networkRetries = 0;
+
+            const payload = await response.json();
+
+            if (payload.status === 'empty') {
+                bulkProgress.value.finished = true;
+                break;
+            }
+
+            bulkProgress.value.sent += Number(payload.sent || 0);
+            bulkProgress.value.failed += Number(payload.failed || 0);
+            bulkProgress.value.processed += Number(payload.batch_total || 0);
+            const dynamicTotal = bulkProgress.value.processed + Number(payload.remaining || 0);
+            if (dynamicTotal > 0) {
+                bulkProgress.value.targetTotal = dynamicTotal;
+            }
+            if (payload.last_angkatan) {
+                bulkProgress.value.currentAngkatan = payload.last_angkatan;
+            }
+
+            afterNim = payload.next_after_nim || null;
+            bulkResumeAfterNim.value = afterNim;
+
+            if (payload.quota_exceeded) {
+                bulkProgress.value.quotaExceeded = true;
+                bulkProgress.value.errorMessage = payload.message || 'Kuota pengiriman harian Amazon SES telah habis.';
+                break;
+            }
+
+            if (!payload.has_more || !afterNim) {
+                bulkProgress.value.finished = true;
+                bulkResumeAfterNim.value = null;
+                break;
             }
         }
-    );
+
+        if (bulkCancelRequested.value && !bulkProgress.value.finished) {
+            bulkProgress.value.stopped = true;
+        }
+    } finally {
+        isBulkSending.value = false;
+        bulkProgress.value.active = false;
+        router.reload({ only: ['mahasiswa'] });
+
+        if (bulkProgress.value.quotaExceeded || bulkProgress.value.errorMessage) {
+            toast.error(bulkProgress.value.errorMessage || 'Pengiriman terhenti karena kendala layanan email.');
+        } else if (bulkProgress.value.stopped) {
+            toast.info(`Pengiriman dihentikan sementara (${bulkProgress.value.sent} email berhasil terkirim).`);
+        } else if (bulkProgress.value.finished) {
+            if (bulkProgress.value.sent === 0 && bulkProgress.value.failed === 0) {
+                toast.info('Tidak ada mahasiswa yang memenuhi syarat pengiriman email.');
+            } else if (bulkProgress.value.failed > 0) {
+                toast.warning(`Pengiriman selesai: ${bulkProgress.value.sent} berhasil, ${bulkProgress.value.failed} gagal.`);
+            } else {
+                toast.success(`Pengiriman massal selesai: ${bulkProgress.value.sent} email berhasil terkirim!`);
+            }
+        }
+    }
 };
+
+watch([bulkOnlyUnsent, bulkOnlyActive, bulkProdi, bulkAngkatan], () => {
+    if (!isBulkSending.value) {
+        resetBulkProgress();
+    }
+});
+
+watch(isBulkDialogOpen, (open) => {
+    if (open && !isBulkSending.value) {
+        resetBulkProgress();
+    }
+});
 
 // Submit handler
 const handleSuccess = () => {
@@ -396,50 +621,155 @@ watch(isViewDialogOpen, (newValue) => {
                             <span class="text-xs font-semibold">Kirim Massal</span>
                         </Button>
                     </DialogTrigger>
-                    <DialogContent class="max-w-lg">
+                    <DialogContent
+                        class="max-w-lg"
+                        @interact-outside="(e) => { if (isBulkSending) e.preventDefault() }"
+                        @escape-key-down="(e) => { if (isBulkSending) e.preventDefault() }"
+                    >
                         <DialogHeader>
                             <DialogTitle class="flex items-center gap-2">
                                 <Mail class="h-5 w-5 text-emerald-600" />
-                                Kirim Password ke Semua Mahasiswa
+                                Kirim Password ke Mahasiswa
                             </DialogTitle>
-                            <DialogDescription class="pt-2 space-y-3">
-                                <p>
-                                    Sistem akan membuatkan password baru secara otomatis dan mengirimkannya langsung ke email masing-masing mahasiswa.
-                                </p>
-                                <div class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-foreground space-y-1">
-                                    <p><strong>Total Mahasiswa dengan email:</strong> {{ totalWithEmail }} orang</p>
-                                    <p><strong>Belum pernah dikirimi email:</strong> {{ totalUnsent }} orang</p>
-                                </div>
-                                <div class="pt-2 flex items-center gap-2">
-                                    <input 
-                                        type="checkbox" 
-                                        id="bulkOnlyUnsent" 
-                                        v-model="bulkOnlyUnsent"
-                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                    />
-                                    <label for="bulkOnlyUnsent" class="text-xs text-foreground font-medium cursor-pointer">
-                                        Hanya kirim ke yang belum pernah menerima email ({{ totalUnsent }} orang)
-                                    </label>
-                                </div>
+                            <DialogDescription class="pt-1">
+                                Pengiriman dilakukan bertahap otomatis (per {{ BULK_CHUNK_SIZE }} mahasiswa) agar stabil dan bebas timeout server.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div class="flex justify-end gap-2 pt-4">
-                            <Button 
-                                variant="outline" 
-                                @click="isBulkDialogOpen = false" 
-                                :disabled="isBulkSending"
+                        <div class="space-y-3 text-xs text-foreground">
+                            <div class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 space-y-1">
+                                <p><strong>Total Mahasiswa dengan email:</strong> {{ totalWithEmail }} orang</p>
+                                <p><strong>Belum pernah dikirimi email:</strong> {{ totalUnsent }} orang</p>
+                                <p><strong>Target sesuai filter di bawah:</strong> <span class="font-bold text-emerald-400">{{ bulkTargetCandidates.length }} orang</span></p>
+                            </div>
+
+                            <!-- Filter Prodi & Angkatan khusus Kirim Massal -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div class="space-y-1">
+                                    <label class="text-[11px] font-medium text-muted-foreground">Filter Program Studi</label>
+                                    <Select v-model="bulkProdi" :disabled="isBulkSending">
+                                        <SelectTrigger class="h-8 text-xs">
+                                            <SelectValue placeholder="Semua Prodi" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Prodi</SelectItem>
+                                            <SelectItem v-for="value in getUniqueValues('id_program_studi')" :key="value" :value="value">
+                                                {{ props.helpers?.programStudi?.find(ps => ps.id === Number(value))?.nama || value }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <label class="text-[11px] font-medium text-muted-foreground">Filter Angkatan</label>
+                                    <Select v-model="bulkAngkatan" :disabled="isBulkSending">
+                                        <SelectTrigger class="h-8 text-xs">
+                                            <SelectValue placeholder="Semua Angkatan" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Angkatan</SelectItem>
+                                            <SelectItem v-for="value in getUniqueValues('angkatan')" :key="value" :value="value">
+                                                Angkatan {{ value }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 pt-1">
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="bulkOnlyUnsent"
+                                        v-model="bulkOnlyUnsent"
+                                        :disabled="isBulkSending"
+                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <label for="bulkOnlyUnsent" class="text-xs text-foreground font-medium cursor-pointer">
+                                        Hanya kirim ke yang belum pernah menerima email
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="bulkOnlyActive"
+                                        v-model="bulkOnlyActive"
+                                        :disabled="isBulkSending"
+                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <label for="bulkOnlyActive" class="text-xs text-foreground font-medium cursor-pointer">
+                                        Hanya mahasiswa berstatus Aktif
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Live Progress Panel -->
+                            <div
+                                v-if="bulkProgress.active || bulkProgress.finished || bulkProgress.stopped || bulkProgress.errorMessage"
+                                class="p-3 rounded-lg border space-y-2"
+                                :class="bulkProgress.errorMessage ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'"
                             >
-                                Batal
+                                <div class="flex items-center justify-between font-medium">
+                                    <span class="flex items-center gap-1.5">
+                                        <LoaderCircle v-if="bulkProgress.active" class="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                                        <TriangleAlert v-else-if="bulkProgress.errorMessage" class="h-3.5 w-3.5 text-red-400" />
+                                        <CheckCircle2 v-else class="h-3.5 w-3.5 text-emerald-400" />
+                                        <template v-if="bulkProgress.active">
+                                            Mengirim email...
+                                            <span v-if="bulkProgress.currentAngkatan" class="text-muted-foreground">(Angkatan {{ bulkProgress.currentAngkatan }})</span>
+                                        </template>
+                                        <template v-else-if="bulkProgress.stopped">Dihentikan sementara</template>
+                                        <template v-else-if="bulkProgress.errorMessage">Terhenti</template>
+                                        <template v-else>Pengiriman selesai</template>
+                                    </span>
+                                    <span>{{ bulkProgress.processed }} / {{ bulkProgress.targetTotal }} ({{ bulkProgressPercent }}%)</span>
+                                </div>
+
+                                <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                    <div
+                                        class="h-full bg-emerald-500 transition-all duration-300"
+                                        :style="{ width: `${bulkProgressPercent}%` }"
+                                    ></div>
+                                </div>
+
+                                <div class="flex items-center justify-between text-[11px] text-muted-foreground">
+                                    <span class="text-emerald-400 font-medium">Berhasil: {{ bulkProgress.sent }}</span>
+                                    <span :class="bulkProgress.failed > 0 ? 'text-amber-400 font-medium' : ''">Gagal: {{ bulkProgress.failed }}</span>
+                                    <span>Sisa: {{ Math.max(0, bulkProgress.targetTotal - bulkProgress.processed) }}</span>
+                                </div>
+
+                                <p v-if="bulkProgress.errorMessage" class="text-[11px] text-red-300 pt-1">
+                                    {{ bulkProgress.errorMessage }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-3">
+                            <Button
+                                v-if="isBulkSending"
+                                variant="destructive"
+                                @click="handleStopBulkSend"
+                                :disabled="bulkCancelRequested"
+                            >
+                                {{ bulkCancelRequested ? 'Menghentikan...' : 'Hentikan Sementara' }}
                             </Button>
-                            <Button 
-                                @click="handleBulkSend" 
-                                :disabled="isBulkSending || (bulkOnlyUnsent ? totalUnsent === 0 : totalWithEmail === 0)"
+                            <Button
+                                v-else
+                                variant="outline"
+                                @click="isBulkDialogOpen = false"
+                            >
+                                {{ bulkProgress.finished ? 'Tutup' : 'Batal' }}
+                            </Button>
+                            <Button
+                                v-if="!bulkProgress.finished"
+                                @click="handleBulkSend"
+                                :disabled="isBulkSending || bulkTargetCandidates.length === 0"
                                 class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
                             >
                                 <LoaderCircle v-if="isBulkSending" class="h-4 w-4 animate-spin" />
                                 <Send v-else class="h-4 w-4" />
-                                Kirim Sekarang
+                                {{ bulkProgress.stopped || bulkProgress.errorMessage ? 'Lanjutkan Pengiriman' : 'Kirim Sekarang' }}
                             </Button>
                         </div>
                     </DialogContent>

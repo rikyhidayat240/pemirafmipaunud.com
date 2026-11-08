@@ -1452,6 +1452,507 @@ class SecurityRegressionTest extends TestCase
         $this->assertSame($latestHima->id, $props['kegiatanHima']['id']);
         $this->assertNotSame($oldDemoHima->id, $props['kegiatanHima']['id']);
     }
+
+    /**
+     * Verifikasi konsistensi pemilihan kegiatan antara /dashboard, /terms, dan /vote
+     * sehingga peserta demo tetap dapat memilih pada kegiatan baru meskipun kegiatan baru
+     * memakai tahun periode berikutnya sementara kegiatan demo lama masih aktif.
+     */
+    public function test_demo_voter_can_vote_when_new_real_events_use_next_period_year_and_align_with_dashboard(): void
+    {
+        $prodi = ProgramStudi::firstOrCreate(['kode' => '51'], ['nama' => 'Kimia']);
+
+        $demoVoter = User::factory()->create([
+            'nim'               => '2308511071',
+            'id_program_studi'  => $prodi->id,
+            'is_admin'          => false,
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+
+        $demoBem = Kegiatan::create([
+            'nama'             => 'Demo Pemilihan BEM',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subDays(3),
+            'waktu_selesai'    => now()->addDays(2),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/demo-bem.webp',
+        ]);
+        $demoHima = Kegiatan::create([
+            'nama'             => 'Demo Pemilihan HIMA Kimia',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => now()->subDays(3),
+            'waktu_selesai'    => now()->addDays(2),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/demo-hima.webp',
+        ]);
+
+        // Tandai demoVoter sudah pernah memilih pada kegiatan Demo
+        $demoTime = now()->subDays(3)->startOfHour()->format('Y-m-d H:i:s');
+        DB::table('surat_suara')->insert([
+            [
+                'id_kegiatan' => $demoBem->id,
+                'nim'         => $demoVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => null,
+                'created_at'  => $demoTime,
+                'updated_at'  => $demoTime,
+            ],
+            [
+                'id_kegiatan' => $demoHima->id,
+                'nim'         => $demoVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => null,
+                'created_at'  => $demoTime,
+                'updated_at'  => $demoTime,
+            ],
+        ]);
+
+        // Panitia membuat kegiatan asli baru (misal dengan tahun periode berikutnya)
+        $realBem = Kegiatan::create([
+            'nama'             => 'Pemilihan BEM FMIPA Asli',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y') + 1,
+            'waktu_mulai'      => now()->subMinutes(15),
+            'waktu_selesai'    => now()->addHours(5),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/real-bem.webp',
+        ]);
+        $realKandidatBem = Kandidat::create([
+            'id_kegiatan'  => $realBem->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi BEM Asli',
+            'misi'         => 'Misi BEM Asli',
+            'jumlah_suara' => 0,
+        ]);
+
+        $realHima = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Kimia Asli',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) date('Y') + 1,
+            'waktu_mulai'      => now()->subMinutes(15),
+            'waktu_selesai'    => now()->addHours(5),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/real-hima.webp',
+        ]);
+        $realKandidatHima = Kandidat::create([
+            'id_kegiatan'  => $realHima->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi HIMA Asli',
+            'misi'         => 'Misi HIMA Asli',
+            'jumlah_suara' => 0,
+        ]);
+
+        // /vote harus menyajikan realBem dan realHima (bukan jatuh kembali ke demoBem/demoHima)
+        $votePage = $this->actingAs($demoVoter)->get('/vote');
+        $votePage->assertOk();
+        $props = $votePage->viewData('page')['props'];
+        $this->assertSame($realBem->id, $props['kegiatanBem']['id']);
+        $this->assertSame($realHima->id, $props['kegiatanHima']['id']);
+
+        $validTtd = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $submitResp = $this->actingAs($demoVoter)->post('/vote', [
+            'id_kandidat_bem'  => $realKandidatBem->id,
+            'id_kandidat_hima' => $realKandidatHima->id,
+            'ttd'              => $validTtd,
+        ]);
+        $submitResp->assertOk();
+
+        $this->assertSame(1, $realKandidatBem->fresh()->jumlah_suara);
+        $this->assertSame(1, $realKandidatHima->fresh()->jumlah_suara);
+    }
+
+    /**
+     * Verifikasi skenario campuran ("sebagian dibuat baru, sebagian diedit dari Demo") saat pemilihan sedang berlangsung:
+     * command `votes:reset-demo` hanya membuka kunci peserta demo (< cutoff), menjaga 100% suara & TTD pemilih asli,
+     * menjaga berkas TTD yang masih direferensikan baris lain, dan menolak reset tally kandidat saat sudah ada suara asli.
+     */
+    public function test_reset_demo_votes_command_unlocks_demo_voters_on_edited_events_while_preserving_real_votes_and_shared_ttds(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $prodi = ProgramStudi::firstOrCreate(['kode' => '51'], ['nama' => 'Kimia']);
+        $realStart = Carbon::now()->subMinutes(20);
+        $coarsenedRealHour = $realStart->copy()->startOfHour()->format('Y-m-d H:i:s');
+        $demoVoteTime = Carbon::now()->subDays(3)->startOfHour()->format('Y-m-d H:i:s');
+
+        $demoVoter = User::factory()->create([
+            'nim'               => '2308511072',
+            'id_program_studi'  => $prodi->id,
+            'is_admin'          => false,
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+        $realVoter = User::factory()->create([
+            'nim'               => '2408511073',
+            'id_program_studi'  => $prodi->id,
+            'is_admin'          => false,
+            'status'            => 'aktif',
+            'email_verified_at' => now(),
+        ]);
+
+        // BEM lama (Demo, sudah berakhir) + BEM baru (dibuat baru hari ini)
+        $oldDemoBem = Kegiatan::create([
+            'nama'             => 'Demo BEM Lama',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => Carbon::now()->subDays(4),
+            'waktu_selesai'    => Carbon::now()->subDays(2),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/old-bem.webp',
+        ]);
+        $newRealBem = Kegiatan::create([
+            'nama'             => 'Pemilihan BEM Asli Baru',
+            'ruang_lingkup'    => 'fakultas',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => $realStart,
+            'waktu_selesai'    => Carbon::now()->addHours(4),
+            'id_program_studi' => null,
+            'foto'             => 'foto-kegiatan/new-bem.webp',
+        ]);
+        $kandidatBem = Kandidat::create([
+            'id_kegiatan'  => $newRealBem->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi BEM',
+            'misi'         => 'Misi BEM',
+            'jumlah_suara' => 1,
+        ]);
+
+        // HIMA Kimia TIDAK dibuat baru, melainkan DIEDIT dari kegiatan Demo yang lama!
+        $editedHima = Kegiatan::create([
+            'nama'             => 'Pemilihan HIMA Kimia (Hasil Edit Demo)',
+            'ruang_lingkup'    => 'program studi',
+            'tahun'            => (int) date('Y'),
+            'waktu_mulai'      => $realStart,
+            'waktu_selesai'    => Carbon::now()->addHours(4),
+            'id_program_studi' => $prodi->id,
+            'foto'             => 'foto-kegiatan/edited-hima.webp',
+        ]);
+        $kandidatHima = Kandidat::create([
+            'id_kegiatan'  => $editedHima->id,
+            'no_urut'      => '01',
+            'visi'         => 'Visi HIMA',
+            'misi'         => 'Misi HIMA',
+            'jumlah_suara' => 2, // 1 sisa demo + 1 suara asli hari ini
+        ]);
+
+        $sharedDemoTtd = 'ttd-mahasiswa/2308511072_shared_demo.png';
+        $realVoterTtd = 'ttd-mahasiswa/2408511073_real_live.png';
+        \Illuminate\Support\Facades\Storage::disk('public')->put($sharedDemoTtd, 'demo-sig');
+        \Illuminate\Support\Facades\Storage::disk('public')->put($realVoterTtd, 'real-sig');
+
+        DB::table('surat_suara')->insert([
+            [
+                'id_kegiatan' => $oldDemoBem->id,
+                'nim'         => $demoVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => $sharedDemoTtd,
+                'created_at'  => $demoVoteTime,
+                'updated_at'  => $demoVoteTime,
+            ],
+            [
+                'id_kegiatan' => $editedHima->id,
+                'nim'         => $demoVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => $sharedDemoTtd,
+                'created_at'  => $demoVoteTime,
+                'updated_at'  => $demoVoteTime,
+            ],
+            [
+                'id_kegiatan' => $newRealBem->id,
+                'nim'         => $realVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => $realVoterTtd,
+                'created_at'  => $coarsenedRealHour,
+                'updated_at'  => $coarsenedRealHour,
+            ],
+            [
+                'id_kegiatan' => $editedHima->id,
+                'nim'         => $realVoter->nim,
+                'has_vote'    => true,
+                'ttd'         => $realVoterTtd,
+                'created_at'  => $coarsenedRealHour,
+                'updated_at'  => $coarsenedRealHour,
+            ],
+        ]);
+
+        // Sebelum reset: demoVoter terhalang memilih HIMA Kimia (kegiatanHima = null di /vote)
+        $beforePage = $this->actingAs($demoVoter)->get('/vote');
+        $beforePage->assertOk();
+        $this->assertNotNull($beforePage->viewData('page')['props']['kegiatanBem']);
+        $this->assertNull($beforePage->viewData('page')['props']['kegiatanHima']);
+
+        // 1. Dry-run tidak mengubah database
+        $this->artisan('votes:reset-demo')
+            ->expectsOutputToContain('[DRY-RUN]')
+            ->assertExitCode(0);
+        $this->assertTrue((bool) DB::table('surat_suara')->where('id_kegiatan', $editedHima->id)->where('nim', $demoVoter->nim)->value('has_vote'));
+
+        // 2. Production guard menolak --force tanpa --confirm-production
+        $originalEnv = $this->app['env'];
+        $this->app['env'] = 'production';
+        try {
+            $this->artisan('votes:reset-demo', ['--force' => true, '--no-interaction' => true])
+                ->assertExitCode(1);
+
+            // 3. Jalankan reset resmi dengan --force --confirm-production
+            $this->artisan('votes:reset-demo', [
+                '--force'                        => true,
+                '--confirm-production'           => true,
+                '--reset-tally-if-no-real-votes' => true,
+            ])->expectsOutputToContain('[APPLIED]')
+              ->assertExitCode(0);
+        } finally {
+            $this->app['env'] = $originalEnv;
+        }
+
+        // Hak pilih demoVoter pada editedHima terbuka kembali, sedangkan realVoter tetap utuh 100%
+        $this->assertFalse((bool) DB::table('surat_suara')->where('id_kegiatan', $editedHima->id)->where('nim', $demoVoter->nim)->value('has_vote'));
+        $this->assertNull(DB::table('surat_suara')->where('id_kegiatan', $editedHima->id)->where('nim', $demoVoter->nim)->value('ttd'));
+
+        $this->assertTrue((bool) DB::table('surat_suara')->where('id_kegiatan', $editedHima->id)->where('nim', $realVoter->nim)->value('has_vote'));
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($realVoterTtd);
+        // Berkas TTD demo yang masih direferensikan oldDemoBem juga tidak terhapus sembarangan
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($sharedDemoTtd);
+
+        // Tally kandidat TIDAK di-reset karena sudah ada suara asli
+        $this->assertSame(2, $kandidatHima->fresh()->jumlah_suara);
+
+        // AuditLog tercatat rapi tanpa kunci sensitif
+        $audit = AuditLog::where('aksi', 'kegiatan.reset_demo')->where('target_id', (string) $editedHima->id)->first();
+        $this->assertNotNull($audit);
+        $this->assertSame(1, $audit->metadata['jumlah_direset']);
+        $this->assertSame(1, $audit->metadata['suara_asli_aman']);
+        $this->assertFalse($audit->metadata['tally_direset']);
+
+        // 4. Kini demoVoter dapat melihat dan memilih KEDUA kegiatan (BEM baru + HIMA hasil edit)
+        $afterPage = $this->actingAs($demoVoter)->get('/vote');
+        $afterPage->assertOk();
+        $this->assertSame($newRealBem->id, $afterPage->viewData('page')['props']['kegiatanBem']['id']);
+        $this->assertSame($editedHima->id, $afterPage->viewData('page')['props']['kegiatanHima']['id']);
+
+        $validTtd = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $this->actingAs($demoVoter)->post('/vote', [
+            'id_kandidat_bem'  => $kandidatBem->id,
+            'id_kandidat_hima' => $kandidatHima->id,
+            'ttd'              => $validTtd,
+        ])->assertOk();
+
+        $this->assertSame(2, $kandidatBem->fresh()->jumlah_suara);
+        $this->assertSame(3, $kandidatHima->fresh()->jumlah_suara);
+
+        // Pemilih asli tetap ditolak bila mencoba memilih lagi
+        $this->actingAs($realVoter)->post('/vote', [
+            'id_kandidat_bem'  => $kandidatBem->id,
+            'id_kandidat_hima' => $kandidatHima->id,
+            'ttd'              => $validTtd,
+        ])->assertRedirect(route('dashboard'));
+        $this->assertSame(3, $kandidatHima->fresh()->jumlah_suara);
+    }
+
+    /**
+     * Verifikasi pengiriman massal bertahap (chunked JSON cursor after_nim) melewati Angkatan 21
+     * tanpa infinite loop saat ada email gagal, mendukung filter angkatan/only_active, dan melepas lock 90s.
+     */
+    public function test_chunked_bulk_credentials_cursor_advances_past_failed_email_and_respects_filters(): void
+    {
+        config(['services.ses.throttle_delay_ms' => 0]);
+
+        $admin = User::factory()->admin()->create(['nim' => 'admin_chunk']);
+
+        $s20 = User::factory()->create([
+            'nim'                 => '2008561001',
+            'angkatan'            => 2020,
+            'status'              => 'aktif',
+            'email'               => 'ok20@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+        $s21Fail = User::factory()->create([
+            'nim'                 => '2108561001',
+            'angkatan'            => 2021,
+            'status'              => 'aktif',
+            'email'               => 'bad21@e-registrasi.unud.ac.id',
+            'credentials_sent_at' => null,
+        ]);
+        $s21Ok = User::factory()->create([
+            'nim'                 => '2108561002',
+            'angkatan'            => 2021,
+            'status'              => 'aktif',
+            'email'               => 'ok21@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+        $s22Ok = User::factory()->create([
+            'nim'                 => '2208561001',
+            'angkatan'            => 2022,
+            'status'              => 'aktif',
+            'email'               => 'ok22@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+        $s21Inactive = User::factory()->create([
+            'nim'                 => '2108561099',
+            'angkatan'            => 2021,
+            'status'              => 'nonaktif',
+            'email'               => 'inactive21@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+
+        $originalBadHash = $s21Fail->password;
+
+        // 1. Jika lock sedang dipegang proses lain, mode chunked harus merespons 409 JSON (bukan redirect 302)
+        $heldLock = \Illuminate\Support\Facades\Cache::lock('pemira_bulk_email_lock', 90);
+        $this->assertTrue($heldLock->get());
+        $this->actingAs($admin)
+            ->postJson(route('users.send-bulk-credentials'), ['chunked' => true, 'batch_size' => 2])
+            ->assertStatus(409)
+            ->assertJsonPath('status', 'locked');
+        $heldLock->release();
+
+        // 2. Simulasikan kegagalan SMTP khusus bad21@e-registrasi.unud.ac.id, sedangkan 3 mahasiswa aktif lain sukses
+        $attemptedEmails = [];
+        \Illuminate\Support\Facades\Mail::shouldReceive('to')
+            ->andReturnUsing(function ($recipient) use (&$attemptedEmails) {
+                $attemptedEmails[] = $recipient;
+                $mock = \Mockery::mock();
+                $mock->shouldReceive('send')->once()->andReturnUsing(function () use ($recipient) {
+                    if ($recipient === 'bad21@e-registrasi.unud.ac.id') {
+                        throw new \RuntimeException('554 Message rejected: Domain has no MX');
+                    }
+
+                    return true;
+                });
+
+                return $mock;
+            });
+
+        $afterNim = null;
+        $totalSent = 0;
+        $totalFailed = 0;
+        $iterations = 0;
+
+        do {
+            $iterations++;
+            $this->assertLessThanOrEqual(5, $iterations, 'Cursor tidak boleh terjebak infinite loop pada mahasiswa yang gagal');
+
+            $res = $this->actingAs($admin)->postJson(route('users.send-bulk-credentials'), [
+                'chunked'     => true,
+                'batch_size'  => 2,
+                'after_nim'   => $afterNim,
+                'only_unsent' => true,
+                'only_active' => true,
+            ]);
+
+            $res->assertOk();
+            $data = $res->json();
+            $totalSent += $data['sent'];
+            $totalFailed += $data['failed'];
+            $afterNim = $data['next_after_nim'];
+        } while ($data['has_more']);
+
+        $this->assertSame(3, $totalSent);
+        $this->assertSame(1, $totalFailed);
+        $this->assertSame(['ok20@gmail.com', 'bad21@e-registrasi.unud.ac.id', 'ok21@gmail.com', 'ok22@gmail.com'], $attemptedEmails);
+        $this->assertNotNull($s20->fresh()->credentials_sent_at);
+        $this->assertNull($s21Fail->fresh()->credentials_sent_at);
+        $this->assertSame($originalBadHash, $s21Fail->fresh()->password);
+        $this->assertNotNull($s21Ok->fresh()->credentials_sent_at);
+        $this->assertNotNull($s22Ok->fresh()->credentials_sent_at);
+        $this->assertNull($s21Inactive->fresh()->credentials_sent_at);
+
+        // Lock harus sudah dilepas setelah batch terakhir selesai
+        $freeLock = \Illuminate\Support\Facades\Cache::lock('pemira_bulk_email_lock', 60);
+        $this->assertTrue($freeLock->get());
+        $freeLock->release();
+    }
+
+    /**
+     * Verifikasi penghentian dini saat kuota harian SES habis (quota_exceeded=true),
+     * opsi CLI --force-unlock, dan konfigurasi timeout/restart_threshold SMTP.
+     */
+    public function test_chunked_bulk_stops_early_on_daily_quota_and_cli_force_unlock_works(): void
+    {
+        config(['services.ses.throttle_delay_ms' => 0]);
+
+        $this->assertSame(15, config('mail.mailers.smtp.timeout'));
+        $this->assertSame(10, config('mail.mailers.smtp.ping_threshold'));
+        $this->assertSame(50, config('mail.mailers.smtp.restart_threshold'));
+
+        $admin = User::factory()->admin()->create(['nim' => 'admin_quota']);
+
+        for ($i = 1; $i <= 4; $i++) {
+            User::factory()->create([
+                'nim'                 => sprintf('2108562%03d', $i),
+                'angkatan'            => 2021,
+                'status'              => 'aktif',
+                'email'               => sprintf('q%d@gmail.com', $i),
+                'credentials_sent_at' => null,
+            ]);
+        }
+
+        $calls = 0;
+        \Illuminate\Support\Facades\Mail::shouldReceive('to')
+            ->twice()
+            ->andReturnSelf();
+        \Illuminate\Support\Facades\Mail::shouldReceive('send')
+            ->twice()
+            ->andReturnUsing(function () use (&$calls) {
+                $calls++;
+                if ($calls === 2) {
+                    throw new \RuntimeException('454 Throttling failure: Daily message quota exceeded');
+                }
+
+                return true;
+            });
+
+        $res = $this->actingAs($admin)->postJson(route('users.send-bulk-credentials'), [
+            'chunked'     => true,
+            'batch_size'  => 4,
+            'only_unsent' => true,
+        ]);
+
+        $res->assertOk()
+            ->assertJsonPath('sent', 1)
+            ->assertJsonPath('failed', 1)
+            ->assertJsonPath('batch_total', 2)
+            ->assertJsonPath('quota_exceeded', true)
+            ->assertJsonPath('has_more', false);
+    }
+
+    /**
+     * Verifikasi opsi CLI --force-unlock membuka lock yang nyangkut dan --only-active melewati nonaktif.
+     */
+    public function test_cli_force_unlock_and_only_active_filter_work(): void
+    {
+        config(['services.ses.throttle_delay_ms' => 0]);
+        \Illuminate\Support\Facades\Mail::fake();
+
+        User::factory()->create([
+            'nim'                 => '2108562010',
+            'angkatan'            => 2021,
+            'status'              => 'aktif',
+            'email'               => 'active21@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+        User::factory()->create([
+            'nim'                 => '2108562011',
+            'angkatan'            => 2021,
+            'status'              => 'nonaktif',
+            'email'               => 'inactive21b@gmail.com',
+            'credentials_sent_at' => null,
+        ]);
+
+        $staleLock = \Illuminate\Support\Facades\Cache::lock('pemira_bulk_email_lock', 3600);
+        $this->assertTrue($staleLock->get());
+
+        $this->artisan('mahasiswa:send-credentials', [
+            '--force-unlock' => true,
+            '--angkatan'     => 2021,
+            '--only-active'  => true,
+        ])->assertExitCode(0);
+
+        \Illuminate\Support\Facades\Mail::assertSentCount(1);
+    }
 }
 
 
