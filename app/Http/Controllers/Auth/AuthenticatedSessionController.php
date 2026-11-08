@@ -38,13 +38,11 @@ class AuthenticatedSessionController extends Controller
         $user = User::find(Auth::user()->nim);
         if (!$user->is_admin && $user->status === 'aktif') {
             // Generate surat suara
-            $kegiatan = Kegiatan::where('tahun', now()->year)
-                ->where('waktu_selesai', '>', now())
+            $kegiatan = Kegiatan::where('waktu_selesai', '>', now())
                 ->where(function ($query) use ($user) {
                     $query->where('id_program_studi', $user->id_program_studi)
                           ->orWhere('ruang_lingkup', 'fakultas');
                 })
-                ->with('mahasiswa')
                 ->get();
             if ($kegiatan->isNotEmpty()) {
                 foreach ($kegiatan as $k) {

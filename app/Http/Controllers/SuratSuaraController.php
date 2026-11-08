@@ -32,8 +32,7 @@ class SuratSuaraController extends Controller
         }
 
         // Fetch kegiatan BEM (fakultas level) without cache to prevent stale data when events are newly created
-        $kegiatanBem = Kegiatan::where('tahun', date('Y'))
-            ->where('waktu_selesai', '>', now())
+        $kegiatanBem = Kegiatan::where('waktu_selesai', '>', now())
             ->where('ruang_lingkup', 'fakultas')
             ->with(['kandidat.mahasiswa', 'programStudi'])
             ->orderByDesc('waktu_mulai')
@@ -41,8 +40,7 @@ class SuratSuaraController extends Controller
             ->first();
 
         // Fetch kegiatan HIMA (program studi level) without cache
-        $kegiatanHima = Kegiatan::where('tahun', date('Y'))
-            ->where('waktu_selesai', '>', now())
+        $kegiatanHima = Kegiatan::where('waktu_selesai', '>', now())
             ->where('ruang_lingkup', 'program studi')
             ->where('id_program_studi', $user->id_program_studi)
             ->with(['kandidat.mahasiswa', 'programStudi'])

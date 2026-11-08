@@ -69,12 +69,12 @@ class BerandaController extends Controller
 
     public function getTime()
     {
-        // First, try to get active kegiatan (waktu_selesai > now)
+        // First, try to get latest active kegiatan (waktu_selesai > now)
         $activeKegiatan = Kegiatan::query()
             ->select(['id', 'waktu_mulai', 'waktu_selesai', 'tahun'])
-            ->where('tahun', now()->year)
             ->where('waktu_selesai', '>', now())
-            ->orderBy('waktu_mulai', 'asc')
+            ->orderByDesc('waktu_mulai')
+            ->orderByDesc('id')
             ->first();
 
         if ($activeKegiatan) {
@@ -84,7 +84,8 @@ class BerandaController extends Controller
         // If no active kegiatan, get the latest ended kegiatan
         $latestKegiatan = Kegiatan::query()
             ->select(['id', 'waktu_mulai', 'waktu_selesai', 'tahun'])
-            ->latest('waktu_selesai')
+            ->orderByDesc('waktu_selesai')
+            ->orderByDesc('id')
             ->first();
 
         return $latestKegiatan ? $latestKegiatan->waktu_mulai : now();
@@ -148,7 +149,10 @@ class BerandaController extends Controller
             ]);
         }
 
-        $kegiatan = Kegiatan::where('tahun', now()->year)
+        $targetYear = (int) (Kegiatan::where('waktu_selesai', '>', now())->max('tahun')
+            ?: (Kegiatan::max('tahun') ?: now()->year));
+
+        $kegiatan = Kegiatan::where('tahun', $targetYear)
             ->where('ruang_lingkup', 'fakultas')
             ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
             ->orderByDesc('waktu_selesai')
@@ -176,7 +180,10 @@ class BerandaController extends Controller
             ]);
         }
 
-        $kegiatans = Kegiatan::where('tahun', now()->year)
+        $targetYear = (int) (Kegiatan::where('waktu_selesai', '>', now())->max('tahun')
+            ?: (Kegiatan::max('tahun') ?: now()->year));
+
+        $kegiatans = Kegiatan::where('tahun', $targetYear)
             ->where('ruang_lingkup', 'program studi')
             ->with(['kandidat', 'kandidat.mahasiswa.programStudi'])
             ->orderByDesc('waktu_selesai')
